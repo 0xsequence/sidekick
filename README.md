@@ -1,7 +1,10 @@
 # Sequence Engine
 
-Setup instructions:
+Quickstart with Docker:
+`pnpm docker:start` (Will start Redis, PostgreSQL, and the server)
+`curl http://127.0.0.1:3000` should return {"status":"ok"}
 
+Run the engine without Docker, locally for development:
 1. Install dependencies: `pnpm install`
 2. Copy `.env.example` to `.env`: `cp .env.example .env`
 3. Set up your environment variables in `.env`:
@@ -11,14 +14,8 @@ Setup instructions:
    - Set `ETHERSCAN_API_KEY` to your Etherscan API key (optional, for fetching abi)
 4. Generate Prisma client: `pnpm prisma generate`
 5. Create database tables: `pnpm prisma migrate dev`
-
-Instructions to run the engine without Docker:
-`pnpm start:redis` (Will start Redis)
-`pnpm start` (Will start the server)
-
-Instructions to run the engine with Docker:
-`pnpm docker:start` (Will start Redis, PostgreSQL, and the server)
-`curl http://127.0.0.1:3000` should return {"status":"ok"}
+6. Start Redis: `pnpm start:redis`
+7. Start the server: `pnpm start`
 
 Instructions to stop and restart the engine with Docker:
 `pnpm docker:stop` (Will stop all the services)
