@@ -3,7 +3,14 @@
 Setup instructions:
 
 1. Install dependencies: `pnpm install`
-2. Create a `.env` and set it up
+2. Copy `.env.example` to `.env`: `cp .env.example .env`
+3. Set up your environment variables in `.env`:
+   - Set `SECRET_KEY` to a random string
+   - Set `EVM_PRIVATE_KEY` to your wallet private key
+   - Set `PROJECT_ACCESS_KEY` to your Sequence project key
+   - Set `ETHERSCAN_API_KEY` to your Etherscan API key (optional, for fetching abi)
+4. Generate Prisma client: `pnpm prisma generate`
+5. Create database tables: `pnpm prisma migrate dev`
 
 Instructions to run the engine without Docker:
 `pnpm start:redis` (Will start Redis)
