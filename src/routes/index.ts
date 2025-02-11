@@ -18,8 +18,9 @@ export default async function (fastify: FastifyInstance) {
     });
 
     //   Get engine sender address
-    fastify.get('/engine-sender-address', async (request, reply) => {
-        const signer = await getSigner(request.headers['x-chain-id'] as string);
+    fastify.get('/engine/smart-account-address', async (request, reply) => {
+        const chainId = '1';
+        const signer = await getSigner(chainId);
         return reply.code(200).send({
             address: await signer.getAddress()
         });

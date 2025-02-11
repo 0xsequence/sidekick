@@ -4,22 +4,21 @@ import setup from '../setup'
 
 describe('Contract Read', () => {
 
-    const { chainId, contractAddress, engineSmartWallet: owner, secretKey } = setup()
+    const { chainId, erc20ContractAddress, engineSmartWallet: owner, secretKey } = setup()
     const functionName = 'balanceOf'
 
     it('should read ERC20 balance from contract', async () => {
         const response = await fetch(
-            `http://127.0.0.1:3000/contract/${chainId}/${contractAddress}/read/${functionName}`,
+            `http://127.0.0.1:3000/contract/${chainId}/${erc20ContractAddress}/read/${functionName}`,
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer test-token',
                     'x-secret-key': secretKey
                 },
                 body: JSON.stringify({
-                    args: JSON.stringify([owner]),
-                    abi: JSON.stringify(erc20Abi)
+                    args: [owner],
+                    abi: erc20Abi
                 })
             }
         )
