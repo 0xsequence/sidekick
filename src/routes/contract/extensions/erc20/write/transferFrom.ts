@@ -24,32 +24,56 @@ type ERC20TransferFromResponse = {
     };
 }
 
+const ERC20TransferFromSchema = {
+    body: {
+        type: 'object',
+        required: ['from', 'to', 'amount'],
+        properties: {
+            from: { type: 'string' },
+            to: { type: 'string' },
+            amount: { type: 'string' }
+        }
+    },
+    params: {
+        type: 'object',
+        required: ['chainId', 'contractAddress'],
+        properties: {
+            chainId: { type: 'string' },
+            contractAddress: { type: 'string' },
+        }
+    },
+    headers: {
+        type: 'object',
+        required: ['x-secret-key', 'x-wallet-address'],
+        properties: {
+            'x-secret-key': { type: 'string' },
+            'x-wallet-address': { type: 'string' },
+        }
+    },
+    response: {
+        200: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        txHash: { type: 'string' },
+                        txUrl: { type: 'string' },
+                        error: { type: 'string', nullable: true }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export async function erc20TransferFrom(fastify: FastifyInstance) {
-    // Transfer Route
     fastify.post<{
         Params: ERC20TransferFromRequestParams;
         Body: ERC20TransferFromRequestBody;
         Reply: ERC20TransferFromResponse;
     }>('/erc20/:chainId/:contractAddress/transferFrom', {
-        schema: {
-            body: {
-                type: 'object',
-                required: ['from', 'to', 'amount'],
-                properties: {
-                    from: { type: 'string' },
-                    to: { type: 'string' },
-                    amount: { type: 'string' }
-                }
-            },
-            params: {
-                type: 'object',
-                required: ['chainId', 'contractAddress'],
-                properties: {
-                    chainId: { type: 'string' },
-                    contractAddress: { type: 'string' },
-                }
-            }
-        }
+        schema: ERC20TransferFromSchema
     }, async (request, reply) => {
         try {
             const { from, to, amount } = request.body;

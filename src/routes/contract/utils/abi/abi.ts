@@ -19,14 +19,6 @@ export async function getAbi(fastify: FastifyInstance) {
         Reply: ReadContractResponse;
     }>('/contract/:chainId/:contractAddress/abi', {
         schema: {
-            querystring: {
-                type: 'object',
-                required: [],
-                properties: {
-                    args: { type: 'string' },
-                    abi: { type: 'string' }
-                }
-            },
             params: {
                 type: 'object',
                 required: ['chainId', 'contractAddress'],
@@ -40,7 +32,6 @@ export async function getAbi(fastify: FastifyInstance) {
         try {
             const { chainId, contractAddress } = request.params;
             const abi = await getAbiFromExplorer(chainId, contractAddress);
-            console.log(abi);
             return reply.code(200).send({
                 result: {
                     data: abi

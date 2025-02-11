@@ -24,31 +24,55 @@ type ERC20ApproveResponse = {
     };
 }
 
+const ERC20ApproveSchema = {
+    body: {
+        type: 'object',
+        required: ['spender', 'amount'],
+        properties: {
+            spender: { type: 'string' },
+            amount: { type: 'string' }
+        }
+    },
+    params: {
+        type: 'object',
+        required: ['chainId', 'contractAddress'],
+        properties: {
+            chainId: { type: 'string' },
+            contractAddress: { type: 'string' }
+        }
+    },
+    headers: {
+        type: 'object',
+        required: ['x-secret-key', 'x-wallet-address'],
+        properties: {
+            'x-secret-key': { type: 'string' },
+            'x-wallet-address': { type: 'string' },
+        }
+    },
+    response: {
+        200: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        txHash: { type: 'string' },
+                        txUrl: { type: 'string' },
+                        error: { type: 'string', nullable: true }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export async function erc20Approve(fastify: FastifyInstance) {
-    // // Approve Route
     fastify.post<{
         Params: ERC20ApproveRequestParams;
         Body: ERC20ApproveRequestBody;
         Reply: ERC20ApproveResponse;
     }>('/erc20/:chainId/:contractAddress/approve', {
-        schema: {
-            body: {
-                type: 'object',
-                required: ['spender', 'amount'],
-                properties: {
-                    spender: { type: 'string' },
-                    amount: { type: 'string' }
-                }
-            },
-            params: {
-                type: 'object',
-                required: ['chainId', 'contractAddress'],
-                properties: {
-                    chainId: { type: 'string' },
-                    contractAddress: { type: 'string' }
-                }
-            }
-        }
+        schema: ERC20ApproveSchema
     }, async (request, reply) => {
         try {
             const { spender, amount } = request.body;

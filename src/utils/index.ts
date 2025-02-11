@@ -1,10 +1,8 @@
 import { Session } from "@0xsequence/auth"
 import type { NetworkConfig } from "@0xsequence/network"
-
 import { findSupportedNetwork } from "@0xsequence/network"
 import type { Interface } from "ethers"
 import { ethers } from "ethers"
-import { baseSepolia } from "viem/chains"
 
 // Helper function to validate Ethereum addresses
 export const isValidEthereumAddress = (address: string): boolean => {
@@ -24,7 +22,7 @@ export const getSigner = async (chainHandle: string) => {
     try {
         const chainConfig: NetworkConfig = findSupportedNetwork(chainHandle)!
 
-        const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl)
+        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL)
 
         const walletEOA = new ethers.Wallet(process.env.EVM_PRIVATE_KEY!, provider);
 
@@ -44,8 +42,6 @@ export const getSigner = async (chainHandle: string) => {
 }
 
 export const getAbiFromExplorer = async (chainId: string, contractAddress: string): Promise<Interface> => {
-    const chainConfig: NetworkConfig = findSupportedNetwork(chainId)!
-    console.log(chainConfig.blockExplorer, "chainConfig.blockExplorer");
     const apiUrl = `https://api-sepolia.basescan.org/api?module=contract&action=getabi&address=${contractAddress}&apikey=${process.env.ETHERSCAN_API_KEY}`
     const response = await fetch(apiUrl)
     const data = await response.json() as { result: string }

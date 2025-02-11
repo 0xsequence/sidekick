@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import auth from './middleware/auth';
 import FastifyRedis from '@fastify/redis'
+import swagger from './plugins/swagger/swagger'
+import cors from '@fastify/cors'
 
 const fastify = Fastify({
     logger: {
@@ -26,6 +28,17 @@ const fastify = Fastify({
     }
 });
 
+// Register CORS
+await fastify.register(cors, {
+    origin: true, // Allow all origins in development
+    methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-secret-key', 'x-wallet-address'],
+    credentials: true
+})
+
+// Register Swagger
+await fastify.register(swagger)
+
 // Register Redis plugin
 fastify.register(FastifyRedis, {
     host: process.env.REDIS_HOST || 'localhost',
@@ -45,9 +58,7 @@ try {
         port: Number(process.env.PORT || 3000), 
         host: process.env.HOST || '0.0.0.0' // This ensures the server is accessible from outside
     });
-    fastify.log.info('\n=== Database Connection Details ===');
-    fastify.log.info(`DATABASE_URL: ${process.env.DATABASE_URL?.replace(/\/\/.*@/, '//***:***@')}`);
-    fastify.log.info('============================\n');
+    fastify.log.info('Access swagger at http://localhost:3000/documentation');
 } catch (err) {
     fastify.log.error(err);
     process.exit(1);

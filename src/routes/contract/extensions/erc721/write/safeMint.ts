@@ -23,31 +23,55 @@ type ERC721SafeMintResponse = {
     };
 }
 
+const ERC721SafeMintSchema = {
+    body: {
+        type: 'object',
+        required: ['to', 'tokenId'],
+        properties: {
+            to: { type: 'string' },
+            tokenId: { type: 'string' }
+        }
+    },
+    params: {
+        type: 'object',
+        required: ['chainId', 'contractAddress'],
+        properties: {
+            chainId: { type: 'string' },
+            contractAddress: { type: 'string' },
+        }
+    },
+    headers: {
+        type: 'object',
+        required: ['x-secret-key', 'x-wallet-address'],
+        properties: {
+            'x-secret-key': { type: 'string' },
+            'x-wallet-address': { type: 'string' },
+        }
+    },
+    response: {
+        200: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        txHash: { type: 'string' },
+                        txUrl: { type: 'string' },
+                        error: { type: 'string', nullable: true }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export async function erc721SafeMint(fastify: FastifyInstance) {
     fastify.post<{
         Params: ERC721SafeMintRequestParams;
         Body: ERC721SafeMintRequestBody;
         Reply: ERC721SafeMintResponse;
     }>('/erc721/:chainId/:contractAddress/safeMint', {
-        schema: {
-            body: {
-                type: 'object',
-                required: ['to', 'tokenId'],
-                properties: {
-                    to: { type: 'string' },
-                    tokenId: { type: 'string' }
-                }
-            },
-            params: {
-                type: 'object',
-                required: ['chainId', 'contractAddress'],
-                properties: {
-                    chainId: { type: 'string' },
-                    contractAddress: { type: 'string' },
-                    functionName: { type: 'string' }
-                }
-            }
-        }
+        schema: ERC721SafeMintSchema
     }, async (request, reply) => {
         try {
             const { to, tokenId } = request.body;

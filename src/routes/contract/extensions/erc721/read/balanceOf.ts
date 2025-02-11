@@ -19,23 +19,45 @@ type ERC721BalanceOfResponse = {
     };
 }
 
+const ERC721BalanceOfSchema = {
+    params: {
+        type: 'object',
+        required: ['chainId', 'contractAddress'],
+        properties: {
+            chainId: { type: 'string' },
+            contractAddress: { type: 'string' },
+        }
+    },
+    query: {
+        type: 'object',
+        required: ['owner'],
+        properties: {
+            owner: { type: 'string' }
+        }
+    },
+    response: {
+        200: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        data: { type: 'string' },
+                        error: { type: 'string', nullable: true }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export async function erc721BalanceOf(fastify: FastifyInstance) {
     fastify.get<{
         Params: ERC721BalanceOfRequestParams;
         Querystring: ERC721BalanceOfRequestQuery;
         Reply: ERC721BalanceOfResponse;
     }>('/erc721/:chainId/:contractAddress/balanceOf', {
-        schema: {
-            params: {
-                type: 'object',
-                required: ['chainId', 'contractAddress'],
-                properties: {
-                    chainId: { type: 'string' },
-                    contractAddress: { type: 'string' },
-                    functionName: { type: 'string' }
-                }
-            }
-        }
+        schema: ERC721BalanceOfSchema
     }, async (request, reply) => {
         try {
             const { chainId, contractAddress } = request.params;

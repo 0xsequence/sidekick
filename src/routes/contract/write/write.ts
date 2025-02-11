@@ -26,33 +26,74 @@ export type WriteContractResponse = {
     };
 }
 
+const WriteContractSchema = {
+    description: 'Write to a smart contract',
+    tags: ['Contract'],
+    body: {
+        type: 'object',
+        required: ['abi', 'args'],
+        properties: {
+            args: {
+                type: 'string',
+                description: 'JSON stringified array of function arguments'
+            },
+            abi: {
+                type: 'string',
+                description: 'Contract ABI in JSON format'
+            },
+        }
+    },
+    headers: {
+        type: 'object',
+        required: ['x-secret-key', 'x-wallet-address'],
+        properties: {
+            'x-secret-key': { type: 'string' },
+            'x-wallet-address': { type: 'string' }
+        }
+    },
+    params: {
+        type: 'object',
+        required: ['chainId', 'contractAddress', 'functionName'],
+        properties: {
+            chainId: {
+                type: 'string',
+                description: 'Chain ID of the network'
+            },
+            contractAddress: {
+                type: 'string',
+                description: 'Contract address'
+            },
+            functionName: {
+                type: 'string',
+                description: 'Function name to call'
+            }
+        }
+    },
+    response: {
+        200: {
+            description: 'Successful response',
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        txHash: { type: 'string', nullable: true },
+                        txUrl: { type: 'string', nullable: true },
+                        error: { type: 'string', nullable: true }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export async function writeContract(fastify: FastifyInstance) {
     fastify.post<{ 
         Params: WriteRequestParams;
         Body: WriteRequestBody;
         Reply: WriteContractResponse;
     }>('/contract/:chainId/:contractAddress/write/:functionName', {
-        schema: {
-            body: {
-                type: 'object',
-                required: ['abi', 'args'],
-                properties: {
-                    args: {
-                        type: 'string',
-                    },
-                    abi: { type: 'string' },
-                }
-            },
-            params: {
-                type: 'object',
-                required: ['chainId', 'contractAddress', 'functionName'],
-                properties: {
-                    chainId: { type: 'string' },
-                    contractAddress: { type: 'string' },
-                    functionName: { type: 'string' }
-                }
-            }
-        }
+        schema: WriteContractSchema
     }, async (request, reply) => {
         try {
             const { args, abi } = request.body;
