@@ -10,6 +10,7 @@ import { erc721BalanceOf } from './contract/extensions/erc721/read/balanceOf';
 import { getTransactions } from './transactions/transactions';
 import { importContracts } from './contract/utils/importContracts/importContracts';
 import { addContract } from './contract/utils/addContract/addContract';
+import { erc721SafeMintBatch } from './contract/extensions/erc721/write/safeMintBatch';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -41,6 +42,7 @@ export default async function (fastify: FastifyInstance) {
 
     // Register erc721 routes
     erc721SafeMint(fastify);
+    erc721SafeMintBatch(fastify);
     erc721BalanceOf(fastify);
 
     // Register transactions route

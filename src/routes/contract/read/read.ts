@@ -5,8 +5,8 @@ import { erc20Abi } from "viem";
 
 // Types for request/response
 type ReadRequestBody = {
-    abi: Array<Object>;    // This should be a string that we'll parse into Interface
-    args?: Array<any>;  // JSON stringified array
+    abi?: Array<Object>;   
+    args?: Array<any>;  
 }
 
 type ReadContractResponse = {
@@ -27,15 +27,14 @@ const ReadContractSchema = {
     tags: ['Contract'],
     body: {
         type: 'object',
-        required: ['abi'],
         properties: {
             abi: {
                 type: 'array',
-                description: 'Contract ABI array'
+                description: 'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.',
             },
             args: {
                 type: 'array',
-                description: 'Array of function arguments'
+                description: 'Array of function arguments',
             }
         }
     },
@@ -81,12 +80,42 @@ export async function readContract(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const { chainId, contractAddress, functionName } = request.params;
-            const { args, abi } = request.body;
+            const { args, abi: abiFromBody } = request.body;
 
             const provider = await getSigner(chainId);
+
+            let abiFromDb: Array<Object> | undefined;
+            if (!abiFromBody) {
+                const contract = await prisma.contract.findUnique({
+                    where: {
+                        contractAddress,
+                        chainId: Number(chainId)
+                    },
+                })
+
+                if (contract) {
+                    if (!contract.abi) {
+                        return reply.code(400).send({
+                            result: {
+                                data: null,
+                                error: 'Contract ABI not found in db. Make sure the contract is added to the database first or pass the abi manually.'
+                            }
+                        })
+                    }
+                    abiFromDb = contract.abi
+                } else {
+                    return reply.code(400).send({
+                        result: {
+                            data: null,
+                            error: 'Contract not found in db.'
+                        }
+                    })
+                }
+            }
+
             const contract = new ethers.Contract(
                 contractAddress,
-                abi,
+                abiFromBody ?? abiFromDb!,
                 provider
             );
 

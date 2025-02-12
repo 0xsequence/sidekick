@@ -81,7 +81,6 @@ export async function addContract(fastify: FastifyInstance) {
         try {
             const { contractName, contractAddress, chainId, abi, bytecode, bytecode_hash, symbol } = request.body;
 
-            // Now add these contracts to the database, check by id if they exist, if they do then update them, if they don't then create them
             const contract = await prisma.contract.create({
                 data: {
                     contractName,

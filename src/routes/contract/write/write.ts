@@ -7,7 +7,7 @@ import { prisma } from '../../../lib/prisma'
 
 // Types for request/response
 type WriteRequestBody = {
-    abi?: Array<Object>;  // Make abi required again
+    abi?: Array<Object>; 
     args?: Array<any>;
 }
 
@@ -36,7 +36,7 @@ const WriteContractSchema = {
                 description: 'JSON stringified array of function arguments'
             },
             abi: {
-                type: 'string',
+                type: 'array',
                 description: 'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.'
             },
         }
@@ -95,6 +95,7 @@ export async function writeContract(fastify: FastifyInstance) {
         try {
             const { args, abi: abiFromBody } = request.body;
             const { chainId, contractAddress, functionName } = request.params;
+            // TODO: Check if the contract is deployed on the chain from params
 
             // Get the signer to use for the transaction
             const signer = await getSigner(chainId);
@@ -109,7 +110,6 @@ export async function writeContract(fastify: FastifyInstance) {
                 })
 
                 if(contract) {
-                    console.log("Fetched contract from db: ", contract)
                     if (!contract.abi) {
                         return reply.code(400).send({
                             result: {
@@ -120,7 +120,6 @@ export async function writeContract(fastify: FastifyInstance) {
                         })
                     }
                     abiFromDb = contract.abi
-                    console.log("Fetched abi from db: ", abiFromDb)
                 } else {
                     return reply.code(400).send({
                         result: {
@@ -157,7 +156,7 @@ export async function writeContract(fastify: FastifyInstance) {
                 data: {
                     hash: txResponse.hash,
                     chainId: Number(chainId),
-                    from: signer.getAddress(),
+                    from: await signer.getAddress(),
                     to: contractAddress,
                     data: data,
                     status: 'done'
