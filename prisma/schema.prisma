@@ -21,18 +21,18 @@ model Transaction {
 }
 
 model Contract {
-  id                        Int       @id
-  projectId                 Int
+  id                        Int       @id @default(autoincrement())
+  projectId                 Int?
   contractName              String
-  contractAddress           String
-  contractType              String
+  contractAddress           String    @unique
+  contractType              String?
   chainId                   Int
-  source                    String
+  source                    String?
   itemsContractAddress      String?
   splitterContractAddresses String[]  @default([])
   abi                       String?
   bytecode                  String
-  bytecode_hash            String
+  bytecode_hash             String?
   audienceId                Int?
   symbol                    String?
   createdAt                 DateTime  @default(now())

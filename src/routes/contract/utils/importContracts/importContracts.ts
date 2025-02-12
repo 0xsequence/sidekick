@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { getAbiFromExplorer } from "../../../../utils";
 import type { Contract } from "../../../../types/contract";
 
 type ReadContractResponse = {

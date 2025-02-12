@@ -32,7 +32,7 @@ const fastify = Fastify({
 await fastify.register(cors, {
     origin: true, // Allow all origins in development
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-secret-key', 'x-wallet-address'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-secret-key'],
     credentials: true
 })
 

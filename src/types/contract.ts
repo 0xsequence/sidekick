@@ -1,17 +1,17 @@
 export type Contract = {
     id: number;
-    projectId: number;
+    projectId?: number;
     contractName: string;
     contractAddress: string;
-    contractType: string;
+    contractType?: string;
     chainId: number;
-    source: string;
+    source?: string;
     itemsContractAddress?: string;
     splitterContractAddresses?: string[];
     abi?: string;
     bytecode: string;
     bytecode_hash: string;
-    audienceId: number | null;
+    audienceId?: number | null;
     symbol?: string;
     createdAt: string;
     updatedAt: string;

@@ -43,10 +43,9 @@ const ERC20ApproveSchema = {
     },
     headers: {
         type: 'object',
-        required: ['x-secret-key', 'x-wallet-address'],
+        required: ['x-secret-key'],
         properties: {
             'x-secret-key': { type: 'string' },
-            'x-wallet-address': { type: 'string' },
         }
     },
     response: {
@@ -77,17 +76,6 @@ export async function erc20Approve(fastify: FastifyInstance) {
         try {
             const { spender, amount } = request.body;
             const { chainId, contractAddress } = request.params;
-
-            const walletAddress = request.headers['x-wallet-address'];
-            if (!walletAddress || typeof walletAddress !== 'string') {
-                return reply.code(400).send({
-                    result: {
-                        txHash: null,
-                        txUrl: null,
-                        error: 'Missing or invalid wallet address header'
-                    }
-                });
-            }
 
             const signer = await getSigner(chainId);
             const contract = new ethers.Contract(

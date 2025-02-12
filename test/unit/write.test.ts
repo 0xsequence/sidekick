@@ -18,7 +18,6 @@ describe('Contract Write', () => {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer test-token',
                     'x-secret-key': secretKey,
-                    'x-wallet-address': engineSmartWallet
                 },
                 body: JSON.stringify({
                     args: JSON.stringify([recipient, 100]),
@@ -46,7 +45,6 @@ describe('Contract Write', () => {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer test-token',
                     'x-secret-key': secretKey,
-                    'x-wallet-address': engineSmartWallet
                 },
                 body: JSON.stringify({
                     args: JSON.stringify([recipient, 101]),
