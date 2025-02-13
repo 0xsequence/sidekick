@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { SequenceIndexer, type WebhookListener } from "@0xsequence/indexer";
+import { type WebhookListener } from "@0xsequence/indexer";
+import { indexerClient } from "../../constants/general";
 
 export type GetAllWebhooksResponse = {
     result?: {
@@ -11,12 +12,10 @@ export type GetAllWebhooksResponse = {
 }
 
 export async function getAllWebhooks(fastify: FastifyInstance) {
-    fastify.post<{
+    fastify.get<{
         Reply: GetAllWebhooksResponse;
     }>('/webhook/getAll', async (request, reply) => {
         try {
-            const indexerClient = new SequenceIndexer(process.env.INDEXER_URL!, process.env.PROJECT_ACCESS_KEY!, process.env.INDEXER_SECRET_KEY!)
-
             const response = await indexerClient.getAllWebhookListeners({})
 
             return reply.code(200).send({

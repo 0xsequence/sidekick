@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { SequenceIndexer, type WebhookListener } from "@0xsequence/indexer";
+import { type WebhookListener } from "@0xsequence/indexer";
+import { indexerClient } from "../../constants/general";
 
 // Types for request/response
 type AddWebhookRequestBody = {
@@ -40,7 +41,39 @@ const AddWebhookSchema = {
         200: {
             type: 'object',
             properties: {
-                data: { type: 'object' }
+                result: {
+                    type: 'object',
+                    properties: {
+                        data: {
+                            type: 'object',
+                            properties: {
+                                webhook: {
+                                    type: 'object',
+                                    nullable: true,
+                                    properties: {
+                                        id: { type: 'string' },
+                                        url: { type: 'string' },
+                                        filters: {
+                                            type: 'object',
+                                            properties: {
+                                                contractAddresses: {
+                                                    type: 'array',
+                                                    items: { type: 'string' }
+                                                },
+                                                events: {
+                                                    type: 'array',
+                                                    items: { type: 'string' }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                status: { type: 'boolean' }
+                            }
+                        },
+                        error: { type: 'string' }
+                    }
+                }
             }
         }
     }
@@ -56,8 +89,6 @@ export async function addWebhook(fastify: FastifyInstance) {
         try {
             const { url, events, contractAddresses } = request.body;
             
-            const indexerClient = new SequenceIndexer(process.env.INDEXER_URL!, process.env.PROJECT_ACCESS_KEY!, process.env.INDEXER_SECRET_KEY!)
-
             const response = await indexerClient.addWebhookListener({
                 url,
                 filters: {
@@ -65,6 +96,9 @@ export async function addWebhook(fastify: FastifyInstance) {
                     events
                 }
             })
+
+            // Add logging to see what we're getting back
+            console.log('Indexer Response:', JSON.stringify(response, null, 2));
 
             return reply.code(200).send({
                 result: {

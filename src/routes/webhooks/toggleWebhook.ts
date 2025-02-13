@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { SequenceIndexer, type WebhookListener } from "@0xsequence/indexer";
+import { type WebhookListener } from "@0xsequence/indexer";
+import { indexerClient } from "../../constants/general";
 
 export type ToggleWebhookResponse = {
     result?: {
@@ -41,8 +42,6 @@ export async function resumeAllWebhooks(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const { webhookId } = request.body;
-
-            const indexerClient = new SequenceIndexer(process.env.INDEXER_URL!, process.env.PROJECT_ACCESS_KEY!, process.env.INDEXER_SECRET_KEY!)
 
             const response = await indexerClient.toggleWebhookListener({ id: Number(webhookId) })
 

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { SequenceIndexer, type EventFilter, type WebhookListener } from "@0xsequence/indexer";
+import {  type EventFilter } from "@0xsequence/indexer";
+import { indexerClient } from "../../constants/general";
 
 export type UpdateWebhookResponse = {
     result?: {
@@ -59,8 +60,6 @@ export async function updateWebhook(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const { webhookId, url, filters, name, active, projectID } = request.body;
-
-            const indexerClient = new SequenceIndexer(process.env.INDEXER_URL!, process.env.PROJECT_ACCESS_KEY!, process.env.INDEXER_SECRET_KEY!)
 
             const response = await indexerClient.updateWebhookListener({listener: {
                 id: Number(webhookId),

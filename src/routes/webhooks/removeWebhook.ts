@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { SequenceIndexer } from "@0xsequence/indexer";
-import type { AddWebhookResponse } from "./addWebhook";
+import { indexerClient } from "../../constants/general";
 
 // Types for request/response
 type RemoveWebhookRequestBody = {
@@ -41,8 +40,6 @@ export async function removeWebhook(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const { webhookId } = request.body;
-
-            const indexerClient = new SequenceIndexer(process.env.INDEXER_URL!, process.env.PROJECT_ACCESS_KEY!, process.env.INDEXER_SECRET_KEY!)
 
             const response = await indexerClient.removeWebhookListener({
                 id: Number(webhookId)
