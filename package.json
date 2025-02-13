@@ -1,11 +1,12 @@
 {
-  "name": "sequence_engine",
+  "name": "sequence_sidekick",
   "module": "index.ts",
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "start:withRedis": "redis-server --daemonize yes && tsx src/index.ts",
+    "dev:withRedis": "redis-server --daemonize yes && tsx watch src/index.ts",
     "build": "tsc",
     "test": "vitest",
     "test:watch": "vitest watch",
@@ -28,6 +29,7 @@
   },
   "dependencies": {
     "@0xsequence/auth": "^2.2.11",
+    "@0xsequence/indexer": "^2.2.13",
     "@0xsequence/network": "^2.2.11",
     "@fastify/cors": "^10.0.2",
     "@fastify/redis": "^7.0.2",

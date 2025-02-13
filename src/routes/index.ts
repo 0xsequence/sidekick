@@ -7,7 +7,19 @@ import { erc20Approve } from './contract/extensions/erc20/write/approve';
 import { getAbi } from './contract/utils/abi/abi';
 import { erc721SafeMint } from './contract/extensions/erc721/write/safeMint';
 import { erc721BalanceOf } from './contract/extensions/erc721/read/balanceOf';
-import { getTransactions } from './transactions/transactions';
+import { getTransactions } from './transactions/getAllTransactions';
+import { importContracts } from './contract/utils/importContracts/importContracts';
+import { addContract } from './contract/utils/addContract/addContract';
+import { erc721SafeMintBatch } from './contract/extensions/erc721/write/safeMintBatch';
+import { erc20Mint } from './contract/extensions/erc20/write/mint';
+import { erc20TransferFrom } from './contract/extensions/erc20/write/transferFrom';
+import { addWebhook } from './webhooks/addWebhook';
+import { removeWebhook } from './webhooks/removeWebhook';
+import { removeAllWebhooks } from './webhooks/removeAllWebhooks';
+import { getAllWebhooks } from './webhooks/getAllWebhooks';
+import { getAllContracts } from './contract/utils/get/getAllContracts';
+import { getContract } from './contract/utils/get/getContract';
+import { getTransactionByHash } from './transactions/getTransactionByHash';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -17,8 +29,8 @@ export default async function (fastify: FastifyInstance) {
         });
     });
 
-    //   Get engine sender address
-    fastify.get('/engine/smart-account-address', async (request, reply) => {
+    //   Get sidekick owner address
+    fastify.get('/sidekick/smart-account-address', async (request, reply) => {
         const chainId = '1';
         const signer = await getSigner(chainId);
         return reply.code(200).send({
@@ -29,18 +41,36 @@ export default async function (fastify: FastifyInstance) {
     // Register contract routes
     readContract(fastify);
     writeContract(fastify);
+    getAllContracts(fastify);
+    getContract(fastify);
 
     // Register erc20 routes
     erc20Transfer(fastify);
     erc20Approve(fastify);
+    erc20Mint(fastify);
+    erc20TransferFrom(fastify);
 
     // Register abi route
     getAbi(fastify);
 
     // Register erc721 routes
     erc721SafeMint(fastify);
+    erc721SafeMintBatch(fastify);
     erc721BalanceOf(fastify);
 
     // Register transactions route
     getTransactions(fastify);
+    getTransactionByHash(fastify);
+
+    // Register import contracts route
+    importContracts(fastify);
+
+    // Register add contract route
+    addContract(fastify);
+
+    // Webhooks
+    addWebhook(fastify);
+    removeWebhook(fastify);
+    removeAllWebhooks(fastify);
+    getAllWebhooks(fastify);
 }

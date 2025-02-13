@@ -1,22 +1,41 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql" 
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Define your models here
 model Transaction {
   id        String   @id @default(cuid())
   hash      String   @unique
   chainId   Int
-  status    String   @default("pending") // pending, success, failed
+  status    String   @default("pending")
   from      String
   to        String
   data      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-} 
+}
+
+model Contract {
+  id                        Int       @id @default(autoincrement())
+  projectId                 Int?
+  contractName              String
+  contractAddress           String    @unique
+  contractType              String?
+  chainId                   Int
+  source                    String?
+  itemsContractAddress      String?
+  splitterContractAddresses String[]  @default([])
+  abi                       String?
+  bytecode                  String
+  bytecode_hash             String?
+  audienceId                Int?
+  symbol                    String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  addedBy                   String    @default("sidekick")
+}

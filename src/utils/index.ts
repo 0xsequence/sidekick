@@ -22,7 +22,7 @@ export const getSigner = async (chainHandle: string) => {
     try {
         const chainConfig: NetworkConfig = findSupportedNetwork(chainHandle)!
 
-        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL)
+        const provider = new ethers.JsonRpcProvider(process.env.SEQUENCE_RPC_URL)
 
         const walletEOA = new ethers.Wallet(process.env.EVM_PRIVATE_KEY!, provider);
 
@@ -31,8 +31,6 @@ export const getSigner = async (chainHandle: string) => {
             signer: walletEOA,
             projectAccessKey: process.env.PROJECT_ACCESS_KEY!
         })
-
-        console.log("Sender address: ", await smartAccount.account.getAddress());
 
         return smartAccount.account.getSigner(chainConfig.chainId)
     } catch (err) {
