@@ -42,10 +42,9 @@ const ERC721SafeMintSchema = {
     },
     headers: {
         type: 'object',
-        required: ['x-secret-key', 'x-wallet-address'],
+        required: ['x-secret-key'],
         properties: {
             'x-secret-key': { type: 'string' },
-            'x-wallet-address': { type: 'string' },
         }
     },
     response: {
@@ -76,17 +75,6 @@ export async function erc721SafeMint(fastify: FastifyInstance) {
         try {
             const { to, tokenId } = request.body;
             const { chainId, contractAddress } = request.params;
-
-            const walletAddress = request.headers['x-wallet-address'];
-            if (!walletAddress || typeof walletAddress !== 'string') {
-                return reply.code(400).send({
-                    result: {
-                        txHash: null,
-                        txUrl: null,
-                        error: 'Missing or invalid wallet address header'
-                    }
-                });
-            }
 
             const signer = await getSigner(chainId);
             const contract = new ethers.Contract(

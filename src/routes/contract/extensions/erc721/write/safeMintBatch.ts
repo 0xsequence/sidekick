@@ -1,22 +1,21 @@
-import { getBlockExplorerUrl } from "../../../../../utils";
-
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../../../utils";
-import { ethers } from "ethers";
-import { erc20Abi } from "abitype/abis";
 import type { TransactionResponse } from "ethers";
+import { ethers } from "ethers";
+import { getBlockExplorerUrl } from '../../../../../utils';
+import { erc721Abi } from "../../../../../constants/abis/erc721";
 
-type ERC20ApproveRequestBody = {
-    spender: string;
-    amount: string;
+type ERC721SafeMintBatchRequestBody = {
+    recipients: string[];
+    tokenIds: string[];
 }
 
-type ERC20ApproveRequestParams = {
+type ERC721SafeMintBatchRequestParams = {
     chainId: string;
     contractAddress: string;
 }
 
-type ERC20ApproveResponse = {
+type ERC721SafeMintBatchResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
@@ -24,13 +23,13 @@ type ERC20ApproveResponse = {
     };
 }
 
-const ERC20ApproveSchema = {
+const ERC721SafeMintBatchSchema = {
     body: {
         type: 'object',
-        required: ['spender', 'amount'],
+        required: ['recipients', 'tokenIds'],
         properties: {
-            spender: { type: 'string' },
-            amount: { type: 'string' }
+            recipients: { type: 'array', items: { type: 'string' } },
+            tokenIds: { type: 'array', items: { type: 'string' } }
         }
     },
     params: {
@@ -38,7 +37,7 @@ const ERC20ApproveSchema = {
         required: ['chainId', 'contractAddress'],
         properties: {
             chainId: { type: 'string' },
-            contractAddress: { type: 'string' }
+            contractAddress: { type: 'string' },
         }
     },
     headers: {
@@ -65,36 +64,37 @@ const ERC20ApproveSchema = {
     }
 }
 
-export async function erc20Approve(fastify: FastifyInstance) {
+export async function erc721SafeMintBatch(fastify: FastifyInstance) {
     fastify.post<{
-        Params: ERC20ApproveRequestParams;
-        Body: ERC20ApproveRequestBody;
-        Reply: ERC20ApproveResponse;
-    }>('/erc20/:chainId/:contractAddress/approve', {
-        schema: ERC20ApproveSchema
+        Params: ERC721SafeMintBatchRequestParams;
+        Body: ERC721SafeMintBatchRequestBody;
+        Reply: ERC721SafeMintBatchResponse;
+    }>('/erc721/:chainId/:contractAddress/safeMintBatch', {
+        schema: ERC721SafeMintBatchSchema
     }, async (request, reply) => {
         try {
-            const { spender, amount } = request.body;
+            const { recipients, tokenIds } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
             const contract = new ethers.Contract(
                 contractAddress,
-                erc20Abi,
+                erc721Abi,
                 signer
             );
 
-            const data = contract.interface.encodeFunctionData(
-                'approve',
-                [spender, amount]
-            );
+            const txs = recipients.map((recipient, index) => {
+                const data = contract.interface.encodeFunctionData(
+                    'safeMint',
+                    [recipient, tokenIds[index]]
+                );
+                return {
+                    to: contractAddress,
+                    data
+                }
+            })
 
-            const tx = {
-                to: contractAddress,
-                data
-            }
-
-            const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+            const txResponse: TransactionResponse = await signer.sendTransaction(txs);
 
             return reply.code(200).send({
                 result: {
@@ -109,10 +109,9 @@ export async function erc20Approve(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
-                    error: error instanceof Error ? error.message : 'Failed to execute approve'
+                    error: error instanceof Error ? error.message : 'Failed to mint NFT'
                 }
             });
         }
     });
 }
-

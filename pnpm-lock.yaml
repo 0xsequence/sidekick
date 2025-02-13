@@ -11,6 +11,9 @@ importers:
       '@0xsequence/auth':
         specifier: ^2.2.11
         version: 2.2.11(ethers@6.13.5)
+      '@0xsequence/indexer':
+        specifier: ^2.2.13
+        version: 2.2.13
       '@0xsequence/network':
         specifier: ^2.2.11
         version: 2.2.11(ethers@6.13.5)
@@ -103,6 +106,9 @@ packages:
 
   '@0xsequence/indexer@2.2.11':
     resolution: {integrity: sha512-1w7s+Vu6BhGsm2rLXs0s3v3jRVr9jH8qvHQuJblUwRY6YyGVlgW1E8e6/eCvNEpyVy2VN2q6FwavRih/gXtZqw==}
+
+  '@0xsequence/indexer@2.2.13':
+    resolution: {integrity: sha512-RFjjjckuAhM0vgYFO1RgYyBqsUrU54l2N/Isr5DPSLCCczp+qcopNuFMB0e0FuvzUP1buunxTjHRVjFH75kQEA==}
 
   '@0xsequence/metadata@2.2.11':
     resolution: {integrity: sha512-+95r0A1exSMVS22tqoB3nZHMnPW7LK75IPwOtbEE9PujsbIEb45FwvNTGN0+s5Pq1fTAm/7fb30VpdREH2SLfg==}
@@ -1549,6 +1555,8 @@ snapshots:
       js-base64: 3.7.7
 
   '@0xsequence/indexer@2.2.11': {}
+
+  '@0xsequence/indexer@2.2.13': {}
 
   '@0xsequence/metadata@2.2.11': {}
 
