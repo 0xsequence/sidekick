@@ -11,6 +11,12 @@ import { getTransactions } from './transactions/transactions';
 import { importContracts } from './contract/utils/importContracts/importContracts';
 import { addContract } from './contract/utils/addContract/addContract';
 import { erc721SafeMintBatch } from './contract/extensions/erc721/write/safeMintBatch';
+import { erc20Mint } from './contract/extensions/erc20/write/mint';
+import { erc20TransferFrom } from './contract/extensions/erc20/write/transferFrom';
+import { addWebhook } from './webhooks/addWebhook';
+import { removeWebhook } from './webhooks/removeWebhook';
+import { removeAllWebhooks } from './webhooks/removeAllWebhooks';
+import { getAllWebhooks } from './webhooks/getAllWebhooks';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -36,6 +42,8 @@ export default async function (fastify: FastifyInstance) {
     // Register erc20 routes
     erc20Transfer(fastify);
     erc20Approve(fastify);
+    erc20Mint(fastify);
+    erc20TransferFrom(fastify);
 
     // Register abi route
     getAbi(fastify);
@@ -53,4 +61,10 @@ export default async function (fastify: FastifyInstance) {
 
     // Register add contract route
     addContract(fastify);
+
+    // Webhooks
+    addWebhook(fastify);
+    removeWebhook(fastify);
+    removeAllWebhooks(fastify);
+    getAllWebhooks(fastify);
 }
