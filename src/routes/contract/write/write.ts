@@ -3,7 +3,6 @@ import { getSigner } from "../../../utils";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../utils'
-import { prisma } from '../../../lib/prisma'
 
 // Types for request/response
 type WriteRequestBody = {
@@ -102,7 +101,7 @@ export async function writeContract(fastify: FastifyInstance) {
 
             let abiFromDb: Array<Object> | undefined;
             if (!abiFromBody) {
-                const contract = await prisma.contract.findUnique({
+                const contract = await fastify.prisma.contract.findUnique({
                     where: {
                         contractAddress,
                         chainId: Number(chainId)
@@ -119,7 +118,7 @@ export async function writeContract(fastify: FastifyInstance) {
                             }
                         })
                     }
-                    abiFromDb = contract.abi
+                    abiFromDb = JSON.parse(contract.abi)
                 } else {
                     return reply.code(400).send({
                         result: {
@@ -152,7 +151,7 @@ export async function writeContract(fastify: FastifyInstance) {
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
             
             // TODO: Handle status 
-            await prisma.transaction.create({
+            await fastify.prisma.transaction.create({
                 data: {
                     hash: txResponse.hash,
                     chainId: Number(chainId),

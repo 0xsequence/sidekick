@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import auth from './middleware/auth';
 import FastifyRedis from '@fastify/redis'
 import swagger from './plugins/swagger/swagger'
+import prisma from './plugins/prisma/prisma'
 import cors from '@fastify/cors'
 
 const fastify = Fastify({
@@ -35,6 +36,9 @@ await fastify.register(cors, {
     allowedHeaders: ['Content-Type', 'Authorization', 'x-secret-key'],
     credentials: true
 })
+
+// Register Prisma plugin
+await fastify.register(prisma)
 
 // Register Swagger
 await fastify.register(swagger)

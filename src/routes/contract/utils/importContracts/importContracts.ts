@@ -96,7 +96,7 @@ export async function importContracts(fastify: FastifyInstance) {
             // Now add these contracts to the database, check by id if they exist, if they do then update them, if they don't then create them
             await Promise.all(
                 contracts.map(contract =>
-                    prisma.contract.upsert({
+                    fastify.prisma.contract.upsert({
                         where: { id: contract.id },
                         update: { ...contract, addedBy: 'builder' },
                         create: { ...contract, addedBy: 'builder' }

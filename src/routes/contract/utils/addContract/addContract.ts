@@ -81,7 +81,7 @@ export async function addContract(fastify: FastifyInstance) {
         try {
             const { contractName, contractAddress, chainId, abi, bytecode, bytecode_hash, symbol } = request.body;
 
-            const contract = await prisma.contract.create({
+            const contract = await fastify.prisma.contract.create({
                 data: {
                     contractName,
                     contractAddress,

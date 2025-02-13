@@ -6,6 +6,7 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "start:withRedis": "redis-server --daemonize yes && tsx src/index.ts",
+    "dev:withRedis": "redis-server --daemonize yes && tsx watch src/index.ts",
     "build": "tsc",
     "test": "vitest",
     "test:watch": "vitest watch",

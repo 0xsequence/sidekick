@@ -7,7 +7,7 @@ import { erc20Approve } from './contract/extensions/erc20/write/approve';
 import { getAbi } from './contract/utils/abi/abi';
 import { erc721SafeMint } from './contract/extensions/erc721/write/safeMint';
 import { erc721BalanceOf } from './contract/extensions/erc721/read/balanceOf';
-import { getTransactions } from './transactions/transactions';
+import { getTransactions } from './transactions/getAllTransactions';
 import { importContracts } from './contract/utils/importContracts/importContracts';
 import { addContract } from './contract/utils/addContract/addContract';
 import { erc721SafeMintBatch } from './contract/extensions/erc721/write/safeMintBatch';
@@ -17,6 +17,9 @@ import { addWebhook } from './webhooks/addWebhook';
 import { removeWebhook } from './webhooks/removeWebhook';
 import { removeAllWebhooks } from './webhooks/removeAllWebhooks';
 import { getAllWebhooks } from './webhooks/getAllWebhooks';
+import { getAllContracts } from './contract/utils/get/getAllContracts';
+import { getContract } from './contract/utils/get/getContract';
+import { getTransactionByHash } from './transactions/getTransactionByHash';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -38,6 +41,8 @@ export default async function (fastify: FastifyInstance) {
     // Register contract routes
     readContract(fastify);
     writeContract(fastify);
+    getAllContracts(fastify);
+    getContract(fastify);
 
     // Register erc20 routes
     erc20Transfer(fastify);
@@ -55,6 +60,7 @@ export default async function (fastify: FastifyInstance) {
 
     // Register transactions route
     getTransactions(fastify);
+    getTransactionByHash(fastify);
 
     // Register import contracts route
     importContracts(fastify);

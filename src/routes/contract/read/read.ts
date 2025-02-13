@@ -1,7 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils";
-import { ethers, Interface } from "ethers";
-import { erc20Abi } from "viem";
+import { ethers } from "ethers";
 
 // Types for request/response
 type ReadRequestBody = {
@@ -86,7 +85,7 @@ export async function readContract(fastify: FastifyInstance) {
 
             let abiFromDb: Array<Object> | undefined;
             if (!abiFromBody) {
-                const contract = await prisma.contract.findUnique({
+                const contract = await fastify.prisma.contract.findUnique({
                     where: {
                         contractAddress,
                         chainId: Number(chainId)
@@ -102,7 +101,7 @@ export async function readContract(fastify: FastifyInstance) {
                             }
                         })
                     }
-                    abiFromDb = contract.abi
+                    abiFromDb = JSON.parse(contract.abi)
                 } else {
                     return reply.code(400).send({
                         result: {
