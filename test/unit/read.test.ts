@@ -4,7 +4,7 @@ import setup from '../setup'
 
 describe('Contract Read', () => {
 
-    const { chainId, erc20ContractAddress, engineSmartWallet: owner, secretKey } = setup()
+    const { chainId, erc20ContractAddress, sidekickSmartWallet: owner, secretKey } = setup()
     const functionName = 'balanceOf'
 
     it('should read ERC20 balance from contract', async () => {

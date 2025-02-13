@@ -6,9 +6,9 @@ import { erc721Abi } from '../../src/constants/abis/erc721'
 
 describe('Contract Write', () => {
 
-    const { chainId, erc20ContractAddress, erc721ContractAddress, recipient, secretKey, engineSmartWallet } = setup()
+    const { chainId, erc20ContractAddress, erc721ContractAddress, recipient, secretKey, sidekickSmartWallet } = setup()
 
-    it.skip('should transfer ERC20 tokens from engine smart wallet to recipient', async () => {
+    it.skip('should transfer ERC20 tokens from sidekick smart wallet to recipient', async () => {
         const functionName = 'transfer'
         const response = await fetch(
             `http://127.0.0.1:3000/contract/${chainId}/${erc20ContractAddress}/write/${functionName}`,
