@@ -3,17 +3,17 @@ version: "3.8"
 services:
   postgres:
     image: postgres:17
-    container_name: engine_postgres
+    container_name: sidekick_postgres
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev -d sequence_engine"]
+      test: ["CMD-SHELL", "pg_isready -U dev -d sequence_sidekick"]
       interval: 5s
       timeout: 5s
       retries: 5
     environment:
       POSTGRES_USER: dev
       POSTGRES_PASSWORD: sequence
-      POSTGRES_DB: sequence_engine
+      POSTGRES_DB: sequence_sidekick
     ports:
       - "5432:5432"
     volumes:
@@ -21,7 +21,7 @@ services:
       - ./prisma/migrations:/docker-entrypoint-initdb.d
 
   redis:
-    container_name: engine_redis
+    container_name: sidekick_redis
     image: redis:7.2
     restart: always
     command: redis-server --requirepass sequence
@@ -30,9 +30,9 @@ services:
     volumes:
       - redis_data:/data
     
-  sequence_engine:
+  sequence_sidekick:
     build: .
-    container_name: sequence_engine
+    container_name: sequence_sidekick
     restart: always
     depends_on:
       postgres:
@@ -40,7 +40,7 @@ services:
       redis:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql://dev:sequence@postgres:5432/sequence_engine?schema=public
+      DATABASE_URL: postgresql://dev:sequence@postgres:5432/sequence_sidekick?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: sequence

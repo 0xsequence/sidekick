@@ -17,8 +17,8 @@ export default async function (fastify: FastifyInstance) {
         });
     });
 
-    //   Get engine sender address
-    fastify.get('/engine/smart-account-address', async (request, reply) => {
+    //   Get sidekick owner address
+    fastify.get('/sidekick/smart-account-address', async (request, reply) => {
         const chainId = '1';
         const signer = await getSigner(chainId);
         return reply.code(200).send({
