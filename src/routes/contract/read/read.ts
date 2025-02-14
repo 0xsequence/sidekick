@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../utils";
+import { getSigner } from "../../../utils/wallet";
 import { ethers } from "ethers";
 
 // Types for request/response

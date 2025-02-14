@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { readContract } from './contract/read/read';
 import { writeContract } from './contract/write/write';
-import { getSigner } from '../utils';
+import { getSigner } from '../utils/wallet';
 import { erc20Transfer } from './contract/extensions/erc20/write/transfer';
 import { erc20Approve } from './contract/extensions/erc20/write/approve';
 import { getAbi } from './contract/utils/abi/abi';

@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../../../utils";
+import { getSigner } from "../../../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import { getBlockExplorerUrl } from '../../../../../utils';
-import { erc20Abi } from "abitype/abis";
+import { getBlockExplorerUrl } from '../../../../../utils/other';
+import { erc20Abi } from "../../../../../constants/abis/erc20";
 
 type ERC20MintRequestBody = {
     to: string;
@@ -37,8 +37,7 @@ const ERC20MintSchema = {
         required: ['chainId', 'contractAddress'],
         properties: {
             chainId: { type: 'string' },
-            contractAddress: { type: 'string' },
-            functionName: { type: 'string' }
+            contractAddress: { type: 'string' }
         }
     },
     headers: {

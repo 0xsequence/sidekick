@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { getAbiFromExplorer } from "../../../../utils";
+import { getAbiFromExplorer } from "../../../../utils/other";
 
 type ReadContractResponse = {
     result?: {
