@@ -1,13 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Contract } from "../../../../types/contract";
 
-type ReadContractResponse = {
-    result?: {
-        data: unknown;
-        error?: string;
-    };
-}
-
 type ImportContractsResponse = {
     result?: {
         data: unknown;

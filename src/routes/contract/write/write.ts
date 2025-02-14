@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../utils";
+import { getSigner } from "../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import { getBlockExplorerUrl } from '../../../utils'
+import { getBlockExplorerUrl } from '../../../utils/other'
 
 // Types for request/response
 type WriteRequestBody = {
