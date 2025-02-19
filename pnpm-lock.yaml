@@ -11,6 +11,9 @@ importers:
       '@0xsequence/auth':
         specifier: ^2.2.11
         version: 2.2.11(ethers@6.13.5)
+      '@0xsequence/google-kms-signer':
+        specifier: ^0.2.0
+        version: 0.2.0(ethers@6.13.5)
       '@0xsequence/indexer':
         specifier: ^2.2.13
         version: 2.2.13
@@ -124,6 +127,11 @@ packages:
     resolution: {integrity: sha512-piihXzbS8Sq7P670a+GyTm3igTJL3Ts6pqjJcC0Sv86yqeK6QD0pzJP4APP+/IQa5k+0s2l1SeZwMjR7gSPtCA==}
     peerDependencies:
       ethers: '>=6'
+
+  '@0xsequence/google-kms-signer@0.2.0':
+    resolution: {integrity: sha512-K119uRlVEQpLbe9cQhnKT/n8TvrZfLuSM0c8ldAN8wdK2regnC+PEtJu0m8XMq2FiweuR6j/IOhcxT3fG0cWpQ==}
+    peerDependencies:
+      ethers: ^6
 
   '@0xsequence/indexer@2.2.11':
     resolution: {integrity: sha512-1w7s+Vu6BhGsm2rLXs0s3v3jRVr9jH8qvHQuJblUwRY6YyGVlgW1E8e6/eCvNEpyVy2VN2q6FwavRih/gXtZqw==}
@@ -1916,6 +1924,20 @@ snapshots:
     dependencies:
       ethers: 6.13.5
       js-base64: 3.7.7
+
+  '@0xsequence/google-kms-signer@0.2.0(ethers@6.13.5)':
+    dependencies:
+      '@ethersproject/bytes': 5.7.0
+      '@ethersproject/properties': 5.7.0
+      '@ethersproject/signing-key': 5.7.0
+      '@ethersproject/transactions': 5.7.0
+      '@google-cloud/kms': 4.5.0
+      asn1js: 3.0.5
+      ethers: 6.13.5
+      pkijs: 3.2.4
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
 
   '@0xsequence/indexer@2.2.11': {}
 

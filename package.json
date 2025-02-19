@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@0xsequence/auth": "^2.2.11",
+    "@0xsequence/google-kms-signer": "^0.2.0",
     "@0xsequence/indexer": "^2.2.13",
     "@0xsequence/network": "^2.2.11",
     "@ethersproject/bytes": "^5.7.0",
