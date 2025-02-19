@@ -2,7 +2,7 @@ import { findSupportedNetwork } from "@0xsequence/network";
 import { Session } from "@0xsequence/auth"
 import type { NetworkConfig } from "@0xsequence/network";
 import { ethers } from "ethers";
-import { GoogleKmsSigner } from "./googleKmsSigner";
+import { GoogleKmsSigner } from "@0xsequence/google-kms-signer";
 
 export const getLocalSigner = async (chainHandle: string) => {
     try {
@@ -53,7 +53,7 @@ export const getSigner = async (chainHandle: string) => {
         return getLocalSigner(chainHandle)
     } else if (process.env.SIGNER_TYPE === 'google_kms') {
         return getGoogleKmsSigner(chainHandle)
-    } 
+    }
 
     return getLocalSigner(chainHandle)
 }
