@@ -56,7 +56,7 @@ export async function erc721BalanceOf(fastify: FastifyInstance) {
         Params: ERC721BalanceOfRequestParams;
         Querystring: ERC721BalanceOfRequestQuery;
         Reply: ERC721BalanceOfResponse;
-    }>('/erc721/:chainId/:contractAddress/balanceOf', {
+    }>('/read/erc721/:chainId/:contractAddress/balanceOf', {
         schema: ERC721BalanceOfSchema
     }, async (request, reply) => {
         try {

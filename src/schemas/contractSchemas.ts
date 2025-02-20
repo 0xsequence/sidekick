@@ -19,3 +19,27 @@ export const ContractSchema = Type.Object({
     updatedAt: Type.String({ format: 'date-time' }),
     addedBy: Type.String()
 })
+
+export const abiTypeSchema = Type.Object({
+    type: Type.Optional(Type.String()),
+    name: Type.Optional(Type.String()),
+    internalType: Type.Optional(Type.String()),
+    stateMutability: Type.Optional(Type.String()),
+    components: Type.Optional(
+        Type.Array(
+            Type.Object({
+                type: Type.Optional(Type.String()),
+                name: Type.Optional(Type.String()),
+                internalType: Type.Optional(Type.String()),
+            }),
+        ),
+    ),
+});
+
+export const AbiSchema = Type.Object({
+    type: Type.String(),
+    name: Type.Optional(Type.String()),
+    inputs: Type.Optional(Type.Array(abiTypeSchema)),
+    outputs: Type.Optional(Type.Array(abiTypeSchema)),
+    stateMutability: Type.Optional(Type.String()),
+});

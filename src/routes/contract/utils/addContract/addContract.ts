@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { AbiSchema } from "../../../../schemas/contractSchemas";
 
 type AddContractResponse = {
     result?: {
@@ -32,7 +33,10 @@ const addContractSchema = {
             contractName: { type: 'string' },
             contractAddress: { type: 'string' },
             chainId: { type: 'number' },
-            abi: { type: 'array' },
+            abi: { 
+                type: 'array',
+                items: AbiSchema
+            },
             bytecode: { type: 'string' },
             bytecode_hash: { type: 'string', nullable: true },
             symbol: { type: 'string', nullable: true }

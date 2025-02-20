@@ -4,7 +4,6 @@ import { writeContract } from './contract/write/write';
 import { getSigner } from '../utils/wallet';
 import { erc20Transfer } from './contract/extensions/erc20/write/transfer';
 import { erc20Approve } from './contract/extensions/erc20/write/approve';
-import { getAbi } from './contract/utils/abi/abi';
 import { erc721SafeMint } from './contract/extensions/erc721/write/safeMint';
 import { erc721BalanceOf } from './contract/extensions/erc721/read/balanceOf';
 import { getTransactions } from './transactions/getAllTransactions';
@@ -49,9 +48,6 @@ export default async function (fastify: FastifyInstance) {
     erc20Approve(fastify);
     erc20Mint(fastify);
     erc20TransferFrom(fastify);
-
-    // Register abi route
-    getAbi(fastify);
 
     // Register erc721 routes
     erc721SafeMint(fastify);

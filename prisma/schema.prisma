@@ -10,12 +10,15 @@ datasource db {
 
 model Transaction {
   id        String   @id @default(cuid())
-  hash      String   @unique
+  hash      String?  
+  txUrl     String?
   chainId   Int
-  status    String   @default("pending")
+  status    String   // 'pending' | 'done' | 'failed'
   from      String
   to        String
-  data      String
+  data      String?  // Made nullable for pending transactions
+  functionName String?
+  args       String[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

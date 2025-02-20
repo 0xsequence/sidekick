@@ -3,6 +3,7 @@ import { getSigner } from "../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../utils/other'
+import { TransactionService } from '../../../services/transaction.service';
 
 // Types for request/response
 type WriteRequestBody = {
@@ -88,7 +89,7 @@ export async function writeContract(fastify: FastifyInstance) {
         Params: WriteRequestParams;
         Body: WriteRequestBody;
         Reply: WriteContractResponse;
-    }>('/contract/:chainId/:contractAddress/write/:functionName', {
+    }>('/write/contract/:chainId/:contractAddress/:functionName', {
         schema: WriteContractSchema
     }, async (request, reply) => {
         try {
@@ -148,19 +149,15 @@ export async function writeContract(fastify: FastifyInstance) {
                 data
             }
 
+            const txService = new TransactionService(fastify);
+            
+            // Create pending transaction first
+            const pendingTx = await txService.createPendingTransaction({chainId, contractAddress, data: {functionName, args: args ?? []}});
+            
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
             
-            // TODO: Handle status 
-            await fastify.prisma.transaction.create({
-                data: {
-                    hash: txResponse.hash,
-                    chainId: Number(chainId),
-                    from: await signer.getAddress(),
-                    to: contractAddress,
-                    data: data,
-                    status: 'done'
-                }
-            });
+            // Update transaction status
+            await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
             return reply.code(200).send({
                 result: {

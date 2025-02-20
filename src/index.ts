@@ -56,6 +56,25 @@ await fastify.register(import('./routes'));
 
 fastify.addHook('preHandler', auth);
 
+// fastify.addHook('preHandler', async (request, done) => {
+//     if (request.url.includes('/write')) {
+//         const txService = new TransactionService(fastify);
+
+//         const { chainId, contractAddress, functionName } = request.params as any;
+//         const { args } = request.body as any;
+//         // Create pending transaction first
+//         const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName, args: args ?? [] } });
+//     }
+// })
+
+// fastify.addHook('onResponse', async (request, reply): Promise<void> => {
+//     if (request.url.includes('/write')) {
+//         // Get the response payload from reply
+//         const response = await reply.raw.payload
+//         console.log('Response 123:', response);
+//     }
+// })
+
 // Start server
 try {
     await fastify.listen({ 

@@ -5,6 +5,7 @@ import { getSigner } from "../../../../../utils/wallet";
 import { ethers } from "ethers";
 import { erc20Abi } from "abitype/abis";
 import type { TransactionResponse } from "ethers";
+import { TransactionService } from "../../../../../services/transaction.service";
 
 type ERC20ApproveRequestBody = {
     spender: string;
@@ -70,7 +71,7 @@ export async function erc20Approve(fastify: FastifyInstance) {
         Params: ERC20ApproveRequestParams;
         Body: ERC20ApproveRequestBody;
         Reply: ERC20ApproveResponse;
-    }>('/erc20/:chainId/:contractAddress/approve', {
+    }>('/write/erc20/:chainId/:contractAddress/approve', {
         schema: ERC20ApproveSchema
     }, async (request, reply) => {
         try {
@@ -94,7 +95,15 @@ export async function erc20Approve(fastify: FastifyInstance) {
                 data
             }
 
+            const txService = new TransactionService(fastify);
+
+            // Create pending transaction first
+            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "approve", args: [spender, amount] } });
+
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+
+            // Update transaction status
+            await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
             return reply.code(200).send({
                 result: {

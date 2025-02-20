@@ -74,7 +74,7 @@ export async function readContract(fastify: FastifyInstance) {
         Params: ReadRequestParams,
         Body: ReadRequestBody;
         Reply: ReadContractResponse;
-    }>('/contract/:chainId/:contractAddress/read/:functionName', {
+    }>('/read/contract/:chainId/:contractAddress/:functionName', {
         schema: ReadContractSchema
     }, async (request, reply) => {
         try {
