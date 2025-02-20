@@ -10,7 +10,6 @@ describe('Get Sidekick Smart Account Wallet', () => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer test-token',
-                    'x-chain-id': '84532'
                 },
             }
         )

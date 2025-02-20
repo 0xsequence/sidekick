@@ -19,6 +19,13 @@ import { getAllWebhooks } from './webhooks/getAllWebhooks';
 import { getAllContracts } from './contract/utils/get/getAllContracts';
 import { getContract } from './contract/utils/get/getContract';
 import { getTransactionByHash } from './transactions/getTransactionByHash';
+import { erc1155Mint } from './contract/extensions/erc1155/write/mint';
+import { erc1155GrantRole } from './contract/extensions/erc1155/write/grantRole';
+import { erc1155MintBatch } from './contract/extensions/erc1155/write/mintBatch';
+import { erc1155MinterRole } from './contract/extensions/erc1155/read/minterRole';
+import { erc1155HasRole } from './contract/extensions/erc1155/read/hasRole';
+import { isDeployed } from './contract/utils/isDeployed/isDeployed';
+import { erc1155BalanceOf } from './contract/extensions/erc1155/read/balanceOf';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -53,6 +60,16 @@ export default async function (fastify: FastifyInstance) {
     erc721SafeMint(fastify);
     erc721SafeMintBatch(fastify);
     erc721BalanceOf(fastify);
+
+    // Register erc1155 routes
+    erc1155Mint(fastify);
+    erc1155MintBatch(fastify);
+    erc1155GrantRole(fastify);
+    erc1155HasRole(fastify);
+    erc1155MinterRole(fastify);
+    erc1155BalanceOf(fastify);
+    // Register is deployed route
+    isDeployed(fastify);
 
     // Register transactions route
     getTransactions(fastify);
