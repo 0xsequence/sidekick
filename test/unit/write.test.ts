@@ -35,7 +35,7 @@ describe('Contract Write', () => {
         expect(payload?.result?.txUrl).toBeDefined()
     }, 10000)
 
-    it('should transfer ERC20 tokens from engine smart wallet to recipient without providing abi', async () => {
+    it('should transfer ERC20 tokens from sidekick smart wallet to recipient without providing abi', async () => {
         const functionName = 'transfer'
         const response = await fetch(
             `http://127.0.0.1:3000/contract/${chainId}/${erc20ContractAddress}/write/${functionName}`,

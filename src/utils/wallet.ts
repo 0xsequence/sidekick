@@ -3,6 +3,7 @@ import { Session } from "@0xsequence/auth"
 import type { NetworkConfig } from "@0xsequence/network";
 import { ethers } from "ethers";
 import { GoogleKmsSigner } from "@0xsequence/google-kms-signer";
+import { AwsKmsSigner } from "./aws_kms_signer";
 
 export const getLocalSigner = async (chainHandle: string) => {
     try {
@@ -48,11 +49,34 @@ export const getGoogleKmsSigner = async (chainHandle: string) => {
     }
 }
 
+export const getAwsKmsSigner = async (chainHandle: string) => {
+    try {
+        const chainConfig: NetworkConfig = findSupportedNetwork(chainHandle)!
+
+        const awsKmsSigner = new AwsKmsSigner(
+            process.env.AWS_REGION!,
+            process.env.AWS_KMS_KEY_ID!
+        )
+
+        const smartAccount = await Session.singleSigner({
+            signer: awsKmsSigner,
+            projectAccessKey: process.env.PROJECT_ACCESS_KEY!
+        })
+
+        return smartAccount.account.getSigner(chainConfig.chainId)
+    } catch (err) {
+        console.error(`ERROR: ${err}`)
+        throw err
+    }
+}
+
 export const getSigner = async (chainHandle: string) => {
     if (process.env.SIGNER_TYPE === 'local') {
         return getLocalSigner(chainHandle)
     } else if (process.env.SIGNER_TYPE === 'google_kms') {
         return getGoogleKmsSigner(chainHandle)
+    } else if (process.env.SIGNER_TYPE === 'aws_kms') {
+        return getAwsKmsSigner(chainHandle)
     }
 
     return getLocalSigner(chainHandle)
