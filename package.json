@@ -18,6 +18,7 @@
     "start:redis": "redis-server --daemonize yes"
   },
   "devDependencies": {
+    "@types/bull-board": "^2.0.4",
     "@types/node": "^22.13.1",
     "@vitest/coverage-v8": "3.0.5",
     "pino-pretty": "^13.0.0",
@@ -33,6 +34,8 @@
     "@0xsequence/indexer": "^2.2.13",
     "@0xsequence/network": "^2.2.11",
     "@aws-sdk/client-kms": "^3.750.0",
+    "@bull-board/api": "^6.7.8",
+    "@bull-board/fastify": "^6.7.8",
     "@ethersproject/bytes": "^5.7.0",
     "@ethersproject/properties": "^5.7.0",
     "@ethersproject/signing-key": "^5.7.0",
@@ -47,8 +50,10 @@
     "@peculiar/asn1-x509": "^2.3.15",
     "@prisma/client": "^6.3.1",
     "@sinclair/typebox": "^0.34.16",
+    "@types/bull": "^4.10.4",
     "abitype": "^1.0.8",
     "asn1js": "^3.0.5",
+    "bull": "^4.16.5",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.5",
     "fastify": "^5.2.1",

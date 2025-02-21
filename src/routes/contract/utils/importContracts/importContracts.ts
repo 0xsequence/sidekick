@@ -82,7 +82,7 @@ export async function importContracts(fastify: FastifyInstance) {
                 })
             });
 
-            const data = await response.json();
+            const data: any = await response.json();
             const contracts: Contract[] = data.contracts;
             console.log('Contracts: ', contracts);
 

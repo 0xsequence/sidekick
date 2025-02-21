@@ -26,6 +26,10 @@ import { erc1155MinterRole } from './contract/extensions/erc1155/read/minterRole
 import { erc1155HasRole } from './contract/extensions/erc1155/read/hasRole';
 import { isDeployed } from './contract/utils/isDeployed/isDeployed';
 import { erc1155BalanceOf } from './contract/extensions/erc1155/read/balanceOf';
+import { stopRewards } from './jobs/rewards/stopRewards';
+import { startRewards } from './jobs/rewards/startRewards';
+import { getJobs } from './jobs/getJobs';
+import { cleanJobs } from './jobs/cleanJobs';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -86,4 +90,11 @@ export default async function (fastify: FastifyInstance) {
     removeWebhook(fastify);
     removeAllWebhooks(fastify);
     getAllWebhooks(fastify);
+
+
+    // Jobs
+    startRewards(fastify);
+    stopRewards(fastify);
+    getJobs(fastify);
+    cleanJobs(fastify);
 }
