@@ -4,6 +4,8 @@ import FastifyRedis from '@fastify/redis'
 import swagger from './plugins/swagger/swagger'
 import prisma from './plugins/prisma/prisma'
 import cors from '@fastify/cors'
+import bull from './plugins/bull/bull';
+import bullBoard from './plugins/bull-board/bull-board';
 
 const fastify = Fastify({
     logger: {
@@ -51,29 +53,14 @@ fastify.register(FastifyRedis, {
     closeClient: true
 })
 
+// Register Bull plugin
+await fastify.register(bull);
+await fastify.register(bullBoard);
+
 // Then register routes
 await fastify.register(import('./routes'));
 
 fastify.addHook('preHandler', auth);
-
-// fastify.addHook('preHandler', async (request, done) => {
-//     if (request.url.includes('/write')) {
-//         const txService = new TransactionService(fastify);
-
-//         const { chainId, contractAddress, functionName } = request.params as any;
-//         const { args } = request.body as any;
-//         // Create pending transaction first
-//         const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName, args: args ?? [] } });
-//     }
-// })
-
-// fastify.addHook('onResponse', async (request, reply): Promise<void> => {
-//     if (request.url.includes('/write')) {
-//         // Get the response payload from reply
-//         const response = await reply.raw.payload
-//         console.log('Response 123:', response);
-//     }
-// })
 
 // Start server
 try {
