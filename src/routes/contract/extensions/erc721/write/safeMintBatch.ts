@@ -25,6 +25,7 @@ type ERC721SafeMintBatchResponse = {
 }
 
 const ERC721SafeMintBatchSchema = {
+    tags: ['ERC721'],
     body: {
         type: 'object',
         required: ['recipients', 'tokenIds'],

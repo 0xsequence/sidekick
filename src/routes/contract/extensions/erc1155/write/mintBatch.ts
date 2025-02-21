@@ -28,6 +28,7 @@ type ERC1155MintBatchResponse = {
 }
 
 const ERC1155MintBatchSchema = {
+    tags: ['ERC1155'],
     body: {
         type: 'object',
         required: ['accounts', 'ids', 'amounts', 'datas'],

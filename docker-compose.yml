@@ -6,7 +6,7 @@ services:
     container_name: sidekick_postgres
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev"]
+      test: ["CMD-SHELL", "pg_isready -U dev -d sequence_sidekick"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -50,7 +50,7 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - SEQUENCE_RPC_URL=${SEQUENCE_RPC_URL}
-      - BUILDER_TOKEN=${BUILDER_TOKEN}
+      - BUILDER_API_SECRET_KEY=${BUILDER_API_SECRET_KEY}
       - INDEXER_SECRET_KEY=${INDEXER_SECRET_KEY}
       - INDEXER_URL=${INDEXER_URL}
       - SIGNER_TYPE=${SIGNER_TYPE}
@@ -65,8 +65,9 @@ services:
       - KEY_RING=${KEY_RING}
       - CRYPTO_KEY=${CRYPTO_KEY}
       - CRYPTO_KEY_VERSION=${CRYPTO_KEY_VERSION}
+      - NODE_ENV=development
       
-    command: ["/bin/sh", "-c", "npx prisma migrate deploy && pnpm start"]
+    command: ["/bin/sh", "-c", "npx prisma migrate reset --force && npx prisma migrate deploy && pnpm start"]
 
 volumes:
   postgres_data:

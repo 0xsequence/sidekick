@@ -64,6 +64,39 @@ const GetJobsSchema = {
     }
 }
 
+const GetJobSchema = {
+    description: 'Get a specific job by ID',
+    tags: ['Jobs'],
+    params: {
+        type: 'object',
+        properties: {
+            jobId: { type: 'string' }
+        }
+    },
+    response: {
+        200: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        data: { type: 'object' },
+                        status: { type: 'string' },
+                        progress: { type: 'number' },
+                        timestamp: { type: 'number' },
+                        finishedOn: { type: 'number' },
+                        processedOn: { type: 'number' },
+                        failedReason: { type: 'string' },
+                        opts: { type: 'object' }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 export async function getJobs(fastify: FastifyInstance) {
     fastify.get<{ 
         Reply: GetJobsReply, 
@@ -121,7 +154,9 @@ export async function getJobs(fastify: FastifyInstance) {
     });
 
     // Get a specific job by ID
-    fastify.get('/rewards/jobs/:jobId', async (request, reply) => {
+    fastify.get('/jobs/:jobId' , {
+        schema: GetJobSchema
+    }, async (request, reply) => {
         try {
             const { jobId } = request.params as { jobId: string };
             const rewardQueue = fastify.rewardQueue as Queue;

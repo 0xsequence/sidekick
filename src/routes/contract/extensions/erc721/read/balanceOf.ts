@@ -20,6 +20,7 @@ type ERC721BalanceOfResponse = {
 }
 
 const ERC721BalanceOfSchema = {
+    tags: ['ERC721'],
     params: {
         type: 'object',
         required: ['chainId', 'contractAddress'],

@@ -25,6 +25,7 @@ type ERC1155GrantRoleResponse = {
 }
 
 const ERC1155GrantRoleSchema = {
+    tags: ['ERC1155'],
     body: {
         type: 'object',
         required: ['role', 'account'],

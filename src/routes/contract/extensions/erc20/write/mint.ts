@@ -25,6 +25,7 @@ type ERC20MintResponse = {
 }
 
 const ERC20MintSchema = {
+    tags: ['ERC20'],
     body: {
         type: 'object',
         required: ['to', 'amount'],

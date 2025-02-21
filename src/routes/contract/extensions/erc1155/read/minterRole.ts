@@ -16,6 +16,7 @@ type ERC1155MinterRoleResponse = {
 }
 
 const ERC1155MinterRoleSchema = {
+    tags: ['ERC1155'],
     params: {
         type: 'object',
         required: ['chainId', 'contractAddress'],

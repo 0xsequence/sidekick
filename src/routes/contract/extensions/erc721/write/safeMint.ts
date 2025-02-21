@@ -25,6 +25,7 @@ type ERC721SafeMintResponse = {
 }
 
 const ERC721SafeMintSchema = {
+    tags: ['ERC721'],
     body: {
         type: 'object',
         required: ['to', 'tokenId'],

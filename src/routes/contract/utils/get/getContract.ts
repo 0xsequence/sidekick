@@ -17,6 +17,7 @@ type GetContractParams = {
 }
 
 const getContractSchema = {
+    tags: ['Contract'],
     response: {
         200: Type.Object({
             result: Type.Object({

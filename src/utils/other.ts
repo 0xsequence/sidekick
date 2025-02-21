@@ -15,10 +15,3 @@ export const getBlockExplorerUrl = (chainId: number, txHash: string): string => 
     const baseUrl = chainConfig.blockExplorer?.rootUrl
     return baseUrl ? `${baseUrl}/tx/${txHash}` : ''
 }
-
-export const getAbiFromExplorer = async (chainId: string, contractAddress: string): Promise<Interface> => {
-    const apiUrl = `https://api-sepolia.basescan.org/api?module=contract&action=getabi&address=${contractAddress}&apikey=${process.env.ETHERSCAN_API_KEY}`
-    const response = await fetch(apiUrl)
-    const data = await response.json() as { result: string }
-    return new ethers.Interface(data.result)
-}

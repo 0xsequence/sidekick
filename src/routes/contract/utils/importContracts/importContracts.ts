@@ -13,6 +13,7 @@ type ImportContractsRequestParams = {
 }
 
 const importContractsSchema = {
+    tags: ['Contract'],
     params: {
         type: 'object',
         required: ['projectId'],
@@ -73,7 +74,7 @@ export async function importContracts(fastify: FastifyInstance) {
             const response = await fetch('https://api.sequence.build/rpc/Builder/ListContracts', {
                 method: 'POST',
                 headers: {
-                    'authorization': `Bearer ${process.env.BUILDER_TOKEN}`,
+                    'authorization': `Bearer ${process.env.BUILDER_API_SECRET_KEY}`,
                     'Accept': '*/*',
                     'Content-Type': 'application/json'
                 },

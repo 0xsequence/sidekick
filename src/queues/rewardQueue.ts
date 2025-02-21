@@ -8,7 +8,7 @@ import { getSigner } from '../utils/wallet';
 interface RewardJob {
     chainId: string;
     contractAddress: string;
-    users: string[];
+    recipients: string[];
     amounts: string[];
 }
 
@@ -35,10 +35,9 @@ export function createRewardQueue(fastify: FastifyInstance) {
         fastify.log.error(`Job ${job.id} has failed:`, err);
     });
 
-    // Add these event handlers
     // Process rewards distribution
     rewardQueue.process('reward-transfer', async (job) => {
-        const { chainId, contractAddress, users, amounts } = job.data;
+        const { chainId, contractAddress, recipients, amounts } = job.data;
 
         try {
             // Mark job as active at start
@@ -57,16 +56,16 @@ export function createRewardQueue(fastify: FastifyInstance) {
                     contractAddress,
                     data: {
                         functionName: 'transfer (batch)',
-                        args: [users, amounts]
+                        args: [recipients, amounts]
                     }
                 });
 
                 await job.progress(50);
 
-                const txs = users.map((user, index) => {
+                const txs = recipients.map((recipient, index) => {
                     const data = contract.interface.encodeFunctionData(
                         'transfer',
-                        [user, amounts[index]]
+                        [recipient, amounts[index]]
                     );
                     return {
                         to: contractAddress,
@@ -89,7 +88,7 @@ export function createRewardQueue(fastify: FastifyInstance) {
                 };
 
             } catch (error) {
-                fastify.log.error(`Failed to distribute rewards to ${users}:`, error);
+                fastify.log.error(`Failed to distribute rewards to ${recipients}:`, error);
                 throw error; // This will mark the job as failed
             }
         } catch (error) {

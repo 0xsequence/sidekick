@@ -25,6 +25,7 @@ type ERC20TransferResponse = {
 }
 
 const ERC20TransferSchema = {
+    tags: ['ERC20'],
     body: {
         type: 'object',
         required: ['to', 'amount'],

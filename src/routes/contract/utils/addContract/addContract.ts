@@ -19,6 +19,7 @@ type AddContractRequestBody = {
 }
 
 const addContractSchema = {
+    tags: ['Contract'],
     headers: {
         type: 'object',
         required: ['x-secret-key'],

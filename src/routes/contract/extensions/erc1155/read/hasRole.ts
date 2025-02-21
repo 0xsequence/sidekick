@@ -22,6 +22,7 @@ type ERC1155HasRoleResponse = {
 }
 
 const ERC1155HasRoleSchema = {
+    tags: ['ERC1155'],
     params: {
         type: 'object',
         required: ['chainId', 'contractAddress'],

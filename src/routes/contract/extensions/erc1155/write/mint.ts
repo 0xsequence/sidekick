@@ -28,6 +28,7 @@ type ERC1155MintResponse = {
 }
 
 const ERC1155MintSchema = {
+    tags: ['ERC1155'],
     body: {
         type: 'object',
         required: ['account', 'id', 'amount', 'data'],

@@ -25,6 +25,7 @@ type ERC721MintResponse = {
 }
 
 const ERC721MintSchema = {
+    tags: ['ERC721'],
     body: {
         type: 'object',
         required: ['to', 'tokenId'],

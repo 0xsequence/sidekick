@@ -22,6 +22,7 @@ type ERC1155BalanceOfResponse = {
 }
 
 const ERC1155BalanceOfSchema = {
+    tags: ['ERC1155'],
     params: {
         type: 'object',
         required: ['chainId', 'contractAddress'],

@@ -16,6 +16,7 @@ type IsDeployedRequestParams = {
 }
 
 const isDeployedSchema = {
+    tags: ['Contract'],
     params: {
         type: 'object',
         required: ['chainId', 'contractAddress'],

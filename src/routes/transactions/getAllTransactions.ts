@@ -2,7 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import { prisma } from '../../lib/prisma';
 
 export async function getTransactions(fastify: FastifyInstance) {
-  fastify.get('/transactions', async (request, reply) => {
+  fastify.get('/transactions', {
+    schema: {
+      tags: ['Transactions'],
+      summary: 'Get all transactions',
+      description: 'Get all transactions from the database',
+    },
+  }, async (request, reply) => {
     try {
       const transactions = await prisma.transaction.findMany({
         orderBy: {

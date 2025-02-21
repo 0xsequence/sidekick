@@ -26,6 +26,7 @@ type ERC20ApproveResponse = {
 }
 
 const ERC20ApproveSchema = {
+    tags: ['ERC20'],
     body: {
         type: 'object',
         required: ['spender', 'amount'],

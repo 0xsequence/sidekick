@@ -4,7 +4,7 @@ import type { JobId, Queue } from 'bull';
 type StartRewardsRequestBody = {
     recipients: string[];      
     amounts: string[];    
-    every: number; // Time in minutes between distributions
+    every_x_minutes: number; // Time in minutes between distributions
     repeat_count: number; // how many times to repeat
 }
 
@@ -18,7 +18,7 @@ type StartRewardsResponse = {
         message: string;
         jobId: JobId;  
         recipients: number;
-        every: number;
+        every_x_minutes: number;
         repeatJobKey: string | undefined;
         nextRun: string;
     },
@@ -45,7 +45,7 @@ const StartRewardsSchema = {
     },
     body: {
         type: 'object',
-        required: ['users', 'amounts', 'timeframe'],
+        required: ['recipients', 'amounts', 'every_x_minutes', 'repeat_count'],
         properties: {
             recipients: { 
                 type: 'array',
@@ -55,7 +55,7 @@ const StartRewardsSchema = {
                 type: 'array',
                 items: { type: 'string' }
             },
-            every: { 
+            every_x_minutes: { 
                 type: 'number',
                 description: 'Time in minutes between distributions. Examples: 10 (10 minutes), 1440 (1 day), 10080 (1 week)'
             },
@@ -73,7 +73,7 @@ const StartRewardsSchema = {
                     type: 'object',
                     properties: {
                         message: { type: 'string' },
-                        jobId: { type: 'number' },
+                        jobId: { type: 'object' },
                         recipients: { type: 'number' },
                         every: { type: 'number' },
                         repeatJobKey: { type: 'string', nullable: true }
@@ -100,7 +100,7 @@ export async function startRewards(fastify: FastifyInstance) {
         schema: StartRewardsSchema
     }, async (request, reply) => {
         try {
-            const { recipients, amounts, every, repeat_count } = request.body;
+            const { recipients, amounts, every_x_minutes, repeat_count } = request.body;
             const { chainId, contractAddress } = request.params;
 
             if (recipients.length !== amounts.length) {
@@ -122,7 +122,7 @@ export async function startRewards(fastify: FastifyInstance) {
                 },
                 {
                     repeat: {
-                        every: every * 60 * 1000,
+                        every: every_x_minutes * 60 * 1000,
                         limit: repeat_count
                     },
                     removeOnComplete: false,
@@ -139,7 +139,7 @@ export async function startRewards(fastify: FastifyInstance) {
             const repeatableJobs = await rewardQueue.getRepeatableJobs();
             const repeatJobKey = repeatableJobs.find(
                 rJob => rJob.id === 'reward-transfer' && 
-                rJob.every === every * 60 * 1000
+                    rJob.every === every_x_minutes * 60 * 1000
             )?.key;
 
             // Store job ID and repeat key in Redis for later management
@@ -149,7 +149,7 @@ export async function startRewards(fastify: FastifyInstance) {
                 repeatJobKey: repeatJobKey,
                 recipients: JSON.stringify(recipients),
                 amounts: JSON.stringify(amounts),
-                every: every
+                every_x_minutes: every_x_minutes
             });
 
             return reply.code(200).send({
@@ -158,8 +158,8 @@ export async function startRewards(fastify: FastifyInstance) {
                     jobId: job.id,
                     repeatJobKey: repeatJobKey,
                     recipients: recipients.length,
-                    every: every,
-                    nextRun: new Date(Date.now() + every * 60 * 1000).toISOString()
+                    every_x_minutes: every_x_minutes,
+                    nextRun: new Date(Date.now() + every_x_minutes * 60 * 1000).toISOString()
                 }
             });
         } catch (error) {

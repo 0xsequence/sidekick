@@ -4,11 +4,12 @@ import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../utils/other'
 import { TransactionService } from '../../../services/transaction.service';
+import { AbiSchema } from "../../../schemas/contractSchemas";
 
 // Types for request/response
 type WriteRequestBody = {
     abi?: Array<Object>; 
-    args?: Array<any>;
+    args?: Array<Object>;
 }
 
 type WriteRequestParams = {
@@ -37,15 +38,16 @@ const WriteContractSchema = {
             },
             abi: {
                 type: 'array',
+                items: AbiSchema,
                 description: 'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.'
-            },
+            }
         }
     },
     headers: {
         type: 'object',
         required: ['x-secret-key'],
         properties: {
-            'x-secret-key': { type: 'string' },
+            'x-secret-key': { type: 'string' }
         }
     },
     params: {
