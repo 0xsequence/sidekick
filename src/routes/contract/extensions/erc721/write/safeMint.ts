@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../../../utils";
+import { getSigner } from "../../../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import { getBlockExplorerUrl } from '../../../../../utils';
+import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc721Abi } from "../../../../../constants/abis/erc721";
+import { TransactionService } from "../../../../../services/transaction.service";
 
 type ERC721SafeMintRequestBody = {
     to: string;
@@ -24,6 +25,7 @@ type ERC721SafeMintResponse = {
 }
 
 const ERC721SafeMintSchema = {
+    tags: ['ERC721'],
     body: {
         type: 'object',
         required: ['to', 'tokenId'],
@@ -42,10 +44,9 @@ const ERC721SafeMintSchema = {
     },
     headers: {
         type: 'object',
-        required: ['x-secret-key', 'x-wallet-address'],
+        required: ['x-secret-key'],
         properties: {
             'x-secret-key': { type: 'string' },
-            'x-wallet-address': { type: 'string' },
         }
     },
     response: {
@@ -70,23 +71,12 @@ export async function erc721SafeMint(fastify: FastifyInstance) {
         Params: ERC721SafeMintRequestParams;
         Body: ERC721SafeMintRequestBody;
         Reply: ERC721SafeMintResponse;
-    }>('/erc721/:chainId/:contractAddress/safeMint', {
+    }>('/write/erc721/:chainId/:contractAddress/safeMint', {
         schema: ERC721SafeMintSchema
     }, async (request, reply) => {
         try {
             const { to, tokenId } = request.body;
             const { chainId, contractAddress } = request.params;
-
-            const walletAddress = request.headers['x-wallet-address'];
-            if (!walletAddress || typeof walletAddress !== 'string') {
-                return reply.code(400).send({
-                    result: {
-                        txHash: null,
-                        txUrl: null,
-                        error: 'Missing or invalid wallet address header'
-                    }
-                });
-            }
 
             const signer = await getSigner(chainId);
             const contract = new ethers.Contract(
@@ -105,7 +95,15 @@ export async function erc721SafeMint(fastify: FastifyInstance) {
                 data
             }
 
+            const txService = new TransactionService(fastify);
+
+            // Create pending transaction first
+            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "safeMint", args: [to, tokenId] } });
+
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+
+            // Update transaction status
+            await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
             return reply.code(200).send({
                 result: {

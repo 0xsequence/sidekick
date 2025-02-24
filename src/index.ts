@@ -2,7 +2,10 @@ import Fastify from 'fastify';
 import auth from './middleware/auth';
 import FastifyRedis from '@fastify/redis'
 import swagger from './plugins/swagger/swagger'
+import prisma from './plugins/prisma/prisma'
 import cors from '@fastify/cors'
+import bull from './plugins/bull/bull';
+import bullBoard from './plugins/bull-board/bull-board';
 
 const fastify = Fastify({
     logger: {
@@ -32,9 +35,12 @@ const fastify = Fastify({
 await fastify.register(cors, {
     origin: true, // Allow all origins in development
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-secret-key', 'x-wallet-address'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-secret-key'],
     credentials: true
 })
+
+// Register Prisma plugin
+await fastify.register(prisma)
 
 // Register Swagger
 await fastify.register(swagger)
@@ -46,6 +52,10 @@ fastify.register(FastifyRedis, {
     password: process.env.REDIS_PASSWORD || 'sequence',
     closeClient: true
 })
+
+// Register Bull plugin
+await fastify.register(bull);
+await fastify.register(bullBoard);
 
 // Then register routes
 await fastify.register(import('./routes'));

@@ -1,15 +1,15 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../utils";
+import { getSigner } from "../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import type { Interface } from "ethers";
-import { getBlockExplorerUrl } from '../../../utils'
-import { prisma } from '../../../lib/prisma'
+import { getBlockExplorerUrl } from '../../../utils/other'
+import { TransactionService } from '../../../services/transaction.service';
+import { AbiSchema } from "../../../schemas/contractSchemas";
 
 // Types for request/response
 type WriteRequestBody = {
-    abi: Interface;  // Make abi required again
-    args?: string;
+    abi?: Array<Object>; 
+    args?: Array<Object>;
 }
 
 type WriteRequestParams = {
@@ -31,24 +31,23 @@ const WriteContractSchema = {
     tags: ['Contract'],
     body: {
         type: 'object',
-        required: ['abi', 'args'],
         properties: {
             args: {
-                type: 'string',
+                type: 'array',
                 description: 'JSON stringified array of function arguments'
             },
             abi: {
-                type: 'string',
-                description: 'Contract ABI in JSON format'
-            },
+                type: 'array',
+                items: AbiSchema,
+                description: 'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.'
+            }
         }
     },
     headers: {
         type: 'object',
-        required: ['x-secret-key', 'x-wallet-address'],
+        required: ['x-secret-key'],
         properties: {
-            'x-secret-key': { type: 'string' },
-            'x-wallet-address': { type: 'string' }
+            'x-secret-key': { type: 'string' }
         }
     },
     params: {
@@ -92,41 +91,59 @@ export async function writeContract(fastify: FastifyInstance) {
         Params: WriteRequestParams;
         Body: WriteRequestBody;
         Reply: WriteContractResponse;
-    }>('/contract/:chainId/:contractAddress/write/:functionName', {
+    }>('/write/contract/:chainId/:contractAddress/:functionName', {
         schema: WriteContractSchema
     }, async (request, reply) => {
         try {
-            const { args, abi } = request.body;
+            const { args, abi: abiFromBody } = request.body;
             const { chainId, contractAddress, functionName } = request.params;
-
-            const parsedArgs = JSON.parse(args ?? "[]");
-
-            // Get wallet from request headers
-            const walletAddress = request.headers['x-wallet-address'];
-            if (!walletAddress || typeof walletAddress !== 'string') {
-                return reply.code(400).send({
-                    result: {
-                        txHash: null,
-                        txUrl: null,
-                        error: 'Missing or invalid wallet address header'
-                    }
-                });
-            }
+            // TODO: Check if the contract is deployed on the chain from params
 
             // Get the signer to use for the transaction
             const signer = await getSigner(chainId);
 
+            let abiFromDb: Array<Object> | undefined;
+            if (!abiFromBody) {
+                const contract = await fastify.prisma.contract.findUnique({
+                    where: {
+                        contractAddress,
+                        chainId: Number(chainId)
+                    },
+                })
+
+                if(contract) {
+                    if (!contract.abi) {
+                        return reply.code(400).send({
+                            result: {
+                                txHash: null,
+                                txUrl: null,
+                                error: 'Contract ABI not found in db. Make sure the contract is added to the database first or pass the abi manually.'
+                            }
+                        })
+                    }
+                    abiFromDb = JSON.parse(contract.abi)
+                } else {
+                    return reply.code(400).send({
+                        result: {
+                            txHash: null,
+                            txUrl: null,
+                            error: 'Contract not found in db.'
+                        }
+                    })
+                }
+            }
+
             // Create contract instance with full ABI
             const contract = new ethers.Contract(
                 contractAddress,
-                abi,
+                abiFromBody ?? abiFromDb!,
                 signer
             );
 
             // Encode function data dynamically
             const data = contract.interface.encodeFunctionData(
                 functionName,
-                parsedArgs ?? null
+                args ?? []
             );
 
             const tx = {
@@ -134,20 +151,15 @@ export async function writeContract(fastify: FastifyInstance) {
                 data
             }
 
+            const txService = new TransactionService(fastify);
+            
+            // Create pending transaction first
+            const pendingTx = await txService.createPendingTransaction({chainId, contractAddress, data: {functionName, args: args ?? []}});
+            
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
-
-            // Save transaction to database
-            // TODO: Handle status 
-            await prisma.transaction.create({
-                data: {
-                    hash: txResponse.hash,
-                    chainId: Number(chainId),
-                    from: walletAddress,
-                    to: contractAddress,
-                    data: data,
-                    status: 'done'
-                }
-            });
+            
+            // Update transaction status
+            await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
             return reply.code(200).send({
                 result: {

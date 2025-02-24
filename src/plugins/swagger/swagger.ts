@@ -7,7 +7,7 @@ export default fp(async function (fastify: FastifyInstance) {
   await fastify.register(swagger, {
     openapi: {
       info: {
-        title: 'Sequence Engine API',
+        title: 'Sequence Sidekick API',
         description: 'API for interacting with smart contracts',
         version: '1.0.0'
       },
@@ -30,7 +30,7 @@ export default fp(async function (fastify: FastifyInstance) {
   await fastify.register(swaggerUi, {
     routePrefix: '/documentation',
     uiConfig: {
-      docExpansion: 'full',
+      docExpansion: 'list',
       deepLinking: false
     },
     staticCSP: false,

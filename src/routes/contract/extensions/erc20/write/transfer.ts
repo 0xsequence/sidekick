@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../../../utils";
+import { getSigner } from "../../../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import { getBlockExplorerUrl } from '../../../../../utils';
+import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc20Abi } from "abitype/abis";
+import { TransactionService } from "../../../../../services/transaction.service";
 
 type ERC20TransferRequestBody = {
     to: string;
@@ -24,6 +25,7 @@ type ERC20TransferResponse = {
 }
 
 const ERC20TransferSchema = {
+    tags: ['ERC20'],
     body: {
         type: 'object',
         required: ['to', 'amount'],
@@ -42,10 +44,9 @@ const ERC20TransferSchema = {
     },
     headers: {
         type: 'object',
-        required: ['x-secret-key', 'x-wallet-address'],
+        required: ['x-secret-key'],
         properties: {
             'x-secret-key': { type: 'string' },
-            'x-wallet-address': { type: 'string' },
         }
     },
     response: {
@@ -70,23 +71,12 @@ export async function erc20Transfer(fastify: FastifyInstance) {
         Params: ERC20TransferRequestParams;
         Body: ERC20TransferRequestBody;
         Reply: ERC20TransferResponse;
-    }>('/erc20/:chainId/:contractAddress/transfer', {
+    }>('/write/erc20/:chainId/:contractAddress/transfer', {
         schema: ERC20TransferSchema
     }, async (request, reply) => {
         try {
             const { to, amount } = request.body;
             const { chainId, contractAddress } = request.params;
-
-            const walletAddress = request.headers['x-wallet-address'];
-            if (!walletAddress || typeof walletAddress !== 'string') {
-                return reply.code(400).send({
-                    result: {
-                        txHash: null,
-                        txUrl: null,
-                        error: 'Missing or invalid wallet address header'
-                    }
-                });
-            }
 
             const signer = await getSigner(chainId);
             const contract = new ethers.Contract(
@@ -105,7 +95,15 @@ export async function erc20Transfer(fastify: FastifyInstance) {
                 data
             }
 
+            const txService = new TransactionService(fastify);
+
+            // Create pending transaction first
+            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "transfer", args: [to, amount] } });
+
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+
+            // Update transaction status
+            await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
             return reply.code(200).send({
                 result: {
