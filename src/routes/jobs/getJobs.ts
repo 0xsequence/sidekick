@@ -5,7 +5,12 @@ type GetJobsReply = {
     result?: {
         jobs: {
             id: JobId;
-            data: any;
+            data: {
+                chainId: string;
+                contractAddress: string;
+                recipients: string[];
+                amounts: string[];
+            };
             progress: number;
             timestamp: number;
             finishedOn: number | undefined;
@@ -47,13 +52,33 @@ const GetJobsSchema = {
                                 type: 'object',
                                 properties: {
                                     id: { type: 'string' },
-                                    data: { type: 'object' },
+                                    data: {
+                                        type: 'object',
+                                        properties: {
+                                            chainId: { type: 'string' },
+                                            contractAddress: { type: 'string' },
+                                            recipients: { type: 'array', items: { type: 'string' } },
+                                            amounts: { type: 'array', items: { type: 'string' } }
+                                        }
+                                    },
                                     progress: { type: 'number' },
                                     timestamp: { type: 'number' },
                                     finishedOn: { type: 'number' },
                                     processedOn: { type: 'number' },
                                     failedReason: { type: 'string' },
-                                    opts: { type: 'object' }
+                                    opts: {
+                                        type: 'object',
+                                        properties: {
+                                            timestamp: { type: 'number' },
+                                            repeat: {
+                                                type: 'object',
+                                                properties: {
+                                                    every: { type: 'number' },
+                                                    limit: { type: 'number' }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
