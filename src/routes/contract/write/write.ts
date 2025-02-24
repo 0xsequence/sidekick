@@ -1,13 +1,15 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../utils";
+import { getSigner } from "../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import { getBlockExplorerUrl } from '../../../utils'
+import { getBlockExplorerUrl } from '../../../utils/other'
+import { TransactionService } from '../../../services/transaction.service';
+import { AbiSchema } from "../../../schemas/contractSchemas";
 
 // Types for request/response
 type WriteRequestBody = {
     abi?: Array<Object>; 
-    args?: Array<any>;
+    args?: Array<Object>;
 }
 
 type WriteRequestParams = {
@@ -36,15 +38,16 @@ const WriteContractSchema = {
             },
             abi: {
                 type: 'array',
+                items: AbiSchema,
                 description: 'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.'
-            },
+            }
         }
     },
     headers: {
         type: 'object',
         required: ['x-secret-key'],
         properties: {
-            'x-secret-key': { type: 'string' },
+            'x-secret-key': { type: 'string' }
         }
     },
     params: {
@@ -88,7 +91,7 @@ export async function writeContract(fastify: FastifyInstance) {
         Params: WriteRequestParams;
         Body: WriteRequestBody;
         Reply: WriteContractResponse;
-    }>('/contract/:chainId/:contractAddress/write/:functionName', {
+    }>('/write/contract/:chainId/:contractAddress/:functionName', {
         schema: WriteContractSchema
     }, async (request, reply) => {
         try {
@@ -148,19 +151,15 @@ export async function writeContract(fastify: FastifyInstance) {
                 data
             }
 
+            const txService = new TransactionService(fastify);
+            
+            // Create pending transaction first
+            const pendingTx = await txService.createPendingTransaction({chainId, contractAddress, data: {functionName, args: args ?? []}});
+            
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
             
-            // TODO: Handle status 
-            await fastify.prisma.transaction.create({
-                data: {
-                    hash: txResponse.hash,
-                    chainId: Number(chainId),
-                    from: await signer.getAddress(),
-                    to: contractAddress,
-                    data: data,
-                    status: 'done'
-                }
-            });
+            // Update transaction status
+            await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
             return reply.code(200).send({
                 result: {

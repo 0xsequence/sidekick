@@ -1,13 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Contract } from "../../../../types/contract";
 
-type ReadContractResponse = {
-    result?: {
-        data: unknown;
-        error?: string;
-    };
-}
-
 type ImportContractsResponse = {
     result?: {
         data: unknown;
@@ -20,6 +13,7 @@ type ImportContractsRequestParams = {
 }
 
 const importContractsSchema = {
+    tags: ['Contract'],
     params: {
         type: 'object',
         required: ['projectId'],
@@ -80,7 +74,7 @@ export async function importContracts(fastify: FastifyInstance) {
             const response = await fetch('https://api.sequence.build/rpc/Builder/ListContracts', {
                 method: 'POST',
                 headers: {
-                    'authorization': `Bearer ${process.env.BUILDER_TOKEN}`,
+                    'authorization': `Bearer ${process.env.BUILDER_API_SECRET_KEY}`,
                     'Accept': '*/*',
                     'Content-Type': 'application/json'
                 },
@@ -89,7 +83,7 @@ export async function importContracts(fastify: FastifyInstance) {
                 })
             });
 
-            const data = await response.json();
+            const data: any = await response.json();
             const contracts: Contract[] = data.contracts;
             console.log('Contracts: ', contracts);
 

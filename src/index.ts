@@ -4,6 +4,8 @@ import FastifyRedis from '@fastify/redis'
 import swagger from './plugins/swagger/swagger'
 import prisma from './plugins/prisma/prisma'
 import cors from '@fastify/cors'
+import bull from './plugins/bull/bull';
+import bullBoard from './plugins/bull-board/bull-board';
 
 const fastify = Fastify({
     logger: {
@@ -50,6 +52,10 @@ fastify.register(FastifyRedis, {
     password: process.env.REDIS_PASSWORD || 'sequence',
     closeClient: true
 })
+
+// Register Bull plugin
+await fastify.register(bull);
+await fastify.register(bullBoard);
 
 // Then register routes
 await fastify.register(import('./routes'));

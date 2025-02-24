@@ -30,7 +30,7 @@ export default fp(async function (fastify: FastifyInstance) {
   await fastify.register(swaggerUi, {
     routePrefix: '/documentation',
     uiConfig: {
-      docExpansion: 'full',
+      docExpansion: 'list',
       deepLinking: false
     },
     staticCSP: false,

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../utils";
+import { getSigner } from "../../../utils/wallet";
 import { ethers } from "ethers";
 
 // Types for request/response
@@ -74,7 +74,7 @@ export async function readContract(fastify: FastifyInstance) {
         Params: ReadRequestParams,
         Body: ReadRequestBody;
         Reply: ReadContractResponse;
-    }>('/contract/:chainId/:contractAddress/read/:functionName', {
+    }>('/read/contract/:chainId/:contractAddress/:functionName', {
         schema: ReadContractSchema
     }, async (request, reply) => {
         try {

@@ -13,6 +13,7 @@ type GetAllContractsResponse = {
 }
 
 const getAllContractsSchema = {
+    tags: ['Contract'],
     response: {
         200: Type.Object({
             result: Type.Object({

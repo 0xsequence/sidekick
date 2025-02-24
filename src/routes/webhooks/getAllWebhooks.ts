@@ -11,10 +11,24 @@ export type GetAllWebhooksResponse = {
     };
 }
 
+const GetAllWebhooksSchema = {
+    tags: ['Webhooks'],
+    response: {
+        200: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                }
+            }
+        }
+    }
+}
+
 export async function getAllWebhooks(fastify: FastifyInstance) {
     fastify.get<{
         Reply: GetAllWebhooksResponse;
-    }>('/webhook/getAll', async (request, reply) => {
+    }>('/webhook/getAll', { schema: GetAllWebhooksSchema }, async (request, reply) => {
         try {
             const response = await indexerClient.getAllWebhookListeners({})
 

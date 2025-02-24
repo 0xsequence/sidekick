@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../../../utils";
+import { getSigner } from "../../../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import { getBlockExplorerUrl } from '../../../../../utils';
+import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc20Abi } from "abitype/abis";
+import { TransactionService } from "../../../../../services/transaction.service";
 
 type ERC20TransferFromRequestBody = {
     from: string;
@@ -25,6 +26,7 @@ type ERC20TransferFromResponse = {
 }
 
 const ERC20TransferFromSchema = {
+    tags: ['ERC20'],
     body: {
         type: 'object',
         required: ['from', 'to', 'amount'],
@@ -71,7 +73,7 @@ export async function erc20TransferFrom(fastify: FastifyInstance) {
         Params: ERC20TransferFromRequestParams;
         Body: ERC20TransferFromRequestBody;
         Reply: ERC20TransferFromResponse;
-    }>('/erc20/:chainId/:contractAddress/transferFrom', {
+    }>('/write/erc20/:chainId/:contractAddress/transferFrom', {
         schema: ERC20TransferFromSchema
     }, async (request, reply) => {
         try {
@@ -95,7 +97,15 @@ export async function erc20TransferFrom(fastify: FastifyInstance) {
                 data
             }
 
+            const txService = new TransactionService(fastify);
+
+            // Create pending transaction first
+            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "transferFrom", args: [from, to, amount] } });
+
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+
+            // Update transaction status
+            await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
             return reply.code(200).send({
                 result: {

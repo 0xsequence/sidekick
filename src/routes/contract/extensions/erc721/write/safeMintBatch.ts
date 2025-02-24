@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../../../utils";
+import { getSigner } from "../../../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import { getBlockExplorerUrl } from '../../../../../utils';
+import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc721Abi } from "../../../../../constants/abis/erc721";
+import { TransactionService } from "../../../../../services/transaction.service";
 
 type ERC721SafeMintBatchRequestBody = {
     recipients: string[];
@@ -24,6 +25,7 @@ type ERC721SafeMintBatchResponse = {
 }
 
 const ERC721SafeMintBatchSchema = {
+    tags: ['ERC721'],
     body: {
         type: 'object',
         required: ['recipients', 'tokenIds'],
@@ -69,7 +71,7 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
         Params: ERC721SafeMintBatchRequestParams;
         Body: ERC721SafeMintBatchRequestBody;
         Reply: ERC721SafeMintBatchResponse;
-    }>('/erc721/:chainId/:contractAddress/safeMintBatch', {
+    }>('/write/erc721/:chainId/:contractAddress/safeMintBatch', {
         schema: ERC721SafeMintBatchSchema
     }, async (request, reply) => {
         try {
@@ -94,7 +96,15 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
                 }
             })
 
+            const txService = new TransactionService(fastify);
+
+            // Create pending transaction first
+            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "safeMintBatch", args: [recipients, tokenIds] } });
+
             const txResponse: TransactionResponse = await signer.sendTransaction(txs);
+
+            // Update transaction status
+            await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
             return reply.code(200).send({
                 result: {

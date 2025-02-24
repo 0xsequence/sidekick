@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../../../utils";
+import { getSigner } from "../../../../../utils/wallet";
 import { ethers } from "ethers";
 import { erc721Abi } from "viem";
 
@@ -20,6 +20,7 @@ type ERC721BalanceOfResponse = {
 }
 
 const ERC721BalanceOfSchema = {
+    tags: ['ERC721'],
     params: {
         type: 'object',
         required: ['chainId', 'contractAddress'],
@@ -56,7 +57,7 @@ export async function erc721BalanceOf(fastify: FastifyInstance) {
         Params: ERC721BalanceOfRequestParams;
         Querystring: ERC721BalanceOfRequestQuery;
         Reply: ERC721BalanceOfResponse;
-    }>('/erc721/:chainId/:contractAddress/balanceOf', {
+    }>('/read/erc721/:chainId/:contractAddress/balanceOf', {
         schema: ERC721BalanceOfSchema
     }, async (request, reply) => {
         try {

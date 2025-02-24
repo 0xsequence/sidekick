@@ -18,6 +18,7 @@ type GetTransactionByHashResponse = {
 }
 
 const getTransactionByHashSchema = {
+    tags: ['Transactions'],
     params: {
         type: 'object',
         required: ['txHash'],
@@ -47,7 +48,7 @@ export async function getTransactionByHash(fastify: FastifyInstance)
     }, async (request, reply) => {
         try {
             const { txHash } = request.params;
-            const transaction = await prisma.transaction.findUnique({
+            const transaction = await prisma.transaction.findFirst({
                 where: {
                     hash: txHash
                 }
