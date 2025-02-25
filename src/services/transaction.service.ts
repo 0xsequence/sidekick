@@ -1,16 +1,54 @@
 import type { FastifyInstance } from "fastify";
 import type { TransactionResponse } from "ethers";
 import { getSigner } from "../utils/wallet";
+import { encodeFunctionData } from "viem";
 
 export class TransactionService {
     constructor(private fastify: FastifyInstance) {}
+
+    async createTransaction(params: {
+        chainId: string;
+        contractAddress: string;
+        abi: Array<unknown>;
+        data?: string | undefined;
+        functionName?: string | undefined;
+        args?: Array<string> | undefined;
+        isDeployTx?: boolean;
+    }) {
+        const signer = await getSigner(params.chainId);
+
+        let encodedData: string | undefined;
+        if(!params.data) {
+            encodedData = encodeFunctionData({
+                abi: params.abi,
+                functionName: params.functionName ?? '',
+                args: params.args ?? [],
+            });
+        }
+
+        const pendingTx = await this.fastify.prisma.transaction.create({
+            data: {
+                hash: "",
+                chainId: Number(params.chainId),
+                from: await signer.getAddress(),
+                to: params.contractAddress,
+                data: params.data ?? encodedData ?? '',
+                status: 'done',
+                args: params.args?.map(arg => arg.toString()) ?? [],
+                functionName: params.functionName ?? '',
+                isDeployTx: params.isDeployTx ?? false,
+            }
+        });
+
+        return pendingTx;
+    }
 
     async createPendingTransaction(params: {
         chainId: string;
         contractAddress: string;
         data: {
             functionName: string;
-            args: any[];
+            args: Array<string>;
         };
     }) {
         const signer = await getSigner(params.chainId);

@@ -30,6 +30,10 @@ import { stopRewards } from './jobs/rewards/stopRewards';
 import { startRewards } from './jobs/rewards/startRewards';
 import { getJobs } from './jobs/getJobs';
 import { cleanJobs } from './jobs/cleanJobs';
+import { erc721Deploy } from './contract/deploy/erc721';
+import { erc1155Deploy } from './contract/deploy/erc1155';
+import { erc20Deploy } from './contract/deploy/erc20';
+import { deployContract } from './contract/deploy/contract';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -72,8 +76,15 @@ export default async function (fastify: FastifyInstance) {
     erc1155HasRole(fastify);
     erc1155MinterRole(fastify);
     erc1155BalanceOf(fastify);
+
     // Register is deployed route
     isDeployed(fastify);
+
+    // Register deploy routes
+    erc721Deploy(fastify);
+    erc20Deploy(fastify);
+    erc1155Deploy(fastify);
+    deployContract(fastify);
 
     // Register transactions route
     getTransactions(fastify);
@@ -90,7 +101,6 @@ export default async function (fastify: FastifyInstance) {
     removeWebhook(fastify);
     removeAllWebhooks(fastify);
     getAllWebhooks(fastify);
-
 
     // Jobs
     startRewards(fastify);
