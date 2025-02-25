@@ -9,18 +9,19 @@ datasource db {
 }
 
 model Transaction {
-  id        String   @id @default(cuid())
-  hash      String?  
-  txUrl     String?
-  chainId   Int
-  status    String   // 'pending' | 'done' | 'failed'
-  from      String
-  to        String
-  data      String?  // Made nullable for pending transactions
-  functionName String?
-  args       String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  hash          String?  
+  txUrl         String?
+  chainId       Int
+  status        String   // 'pending' | 'done' | 'failed'
+  from          String
+  to            String
+  data          String?  // Made nullable for pending transactions
+  functionName  String?
+  args          String[]
+  isDeployTx    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Contract {

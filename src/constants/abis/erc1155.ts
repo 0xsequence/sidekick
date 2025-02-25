@@ -10,6 +10,11 @@ export const erc1155Abi = [
                 "internalType": "address",
                 "name": "minter",
                 "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
             }
         ],
         "stateMutability": "nonpayable",

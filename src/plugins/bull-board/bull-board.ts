@@ -4,7 +4,7 @@ import { FastifyAdapter } from '@bull-board/fastify';
 import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
 
-export default fp(async function (fastify: FastifyInstance) {
+export default fp(async (fastify: FastifyInstance) => {
     const serverAdapter = new FastifyAdapter();
 
     createBullBoard({
