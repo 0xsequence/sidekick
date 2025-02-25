@@ -8,8 +8,8 @@ import { AbiSchema } from "../../../schemas/contractSchemas";
 
 // Types for request/response
 type WriteRequestBody = {
-    abi?: Array<Object>; 
-    args?: Array<Object>;
+    abi?: Array<ethers.InterfaceAbi>;
+    args?: Array<string | number | boolean>;
 }
 
 type WriteRequestParams = {
@@ -102,7 +102,7 @@ export async function writeContract(fastify: FastifyInstance) {
             // Get the signer to use for the transaction
             const signer = await getSigner(chainId);
 
-            let abiFromDb: Array<Object> | undefined;
+            let abiFromDb: Array<ethers.InterfaceAbi> | undefined;
             if (!abiFromBody) {
                 const contract = await fastify.prisma.contract.findUnique({
                     where: {
