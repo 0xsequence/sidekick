@@ -3,12 +3,11 @@ import { getSigner } from "../../../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../../../utils/other';
-import { erc721Abi } from "../../../../../constants/abis/erc721";
 import { TransactionService } from "../../../../../services/transaction.service";
 import { erc1155Abi } from "../../../../../constants/abis/erc1155";
 
 type ERC1155MintBatchRequestBody = {
-    accounts: string[];
+    recipients: string[];
     ids: string[];
     amounts: string[];
     datas: string[];
@@ -31,9 +30,9 @@ const ERC1155MintBatchSchema = {
     tags: ['ERC1155'],
     body: {
         type: 'object',
-        required: ['accounts', 'ids', 'amounts', 'datas'],
+        required: ['recipients', 'ids', 'amounts', 'datas'],
         properties: {
-            accounts: { type: 'array', items: { type: 'string' } },
+            recipients: { type: 'array', items: { type: 'string' } },
             ids: { type: 'array', items: { type: 'string' } },
             amounts: { type: 'array', items: { type: 'string' } },
             datas: { type: 'array', items: { type: 'string' } }
@@ -80,7 +79,7 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
         schema: ERC1155MintBatchSchema
     }, async (request, reply) => {
         try {
-            const { accounts, ids, amounts, datas } = request.body;
+            const { recipients, ids, amounts, datas } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
@@ -90,7 +89,7 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
                 signer
             );
 
-            const txs = accounts.map((account: string, index: number) => {
+            const txs = recipients.map((account: string, index: number) => {
                 const data = contract.interface.encodeFunctionData(
                     'mint',
                     [account, ids[index], amounts[index], datas[index]]
@@ -104,7 +103,7 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
             const txService = new TransactionService(fastify);
 
             // Create pending transaction first
-            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint (batch)", args: [accounts, ids, amounts, datas] } });
+            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint (batch)", args: [] } });
 
             const txResponse: TransactionResponse = await signer.sendTransaction(txs);
 

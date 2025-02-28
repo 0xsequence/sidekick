@@ -1,3 +1,5 @@
+import type { InterfaceAbi } from "ethers";
+
 export type Contract = {
     id: number;
     projectId?: number;
@@ -8,7 +10,7 @@ export type Contract = {
     source?: string;
     itemsContractAddress?: string;
     splitterContractAddresses?: string[];
-    abi?: string;
+    abi?: InterfaceAbi;
     bytecode: string;
     bytecode_hash: string;
     audienceId?: number | null;

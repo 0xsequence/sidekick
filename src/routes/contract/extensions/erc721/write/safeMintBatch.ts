@@ -99,7 +99,7 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
             const txService = new TransactionService(fastify);
 
             // Create pending transaction first
-            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "safeMintBatch", args: [recipients, tokenIds] } });
+            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "safeMintBatch", args: [] } });
 
             const txResponse: TransactionResponse = await signer.sendTransaction(txs);
 

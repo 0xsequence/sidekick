@@ -18,7 +18,7 @@ model Transaction {
   to            String
   data          String?  // Made nullable for pending transactions
   functionName  String?
-  args          String[]
+  argsJson      String?  @default("[]") // Store args as JSON string
   isDeployTx    Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
