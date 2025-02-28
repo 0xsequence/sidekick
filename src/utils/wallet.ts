@@ -3,7 +3,7 @@ import { Session } from "@0xsequence/auth"
 import type { NetworkConfig } from "@0xsequence/network";
 import { ethers } from "ethers";
 import { GoogleKmsSigner } from "@0xsequence/google-kms-signer";
-import { AwsKmsSigner } from "./aws_kms_signer";
+import { AwsKmsSigner } from "@0xsequence/aws-kms-signer";
 
 export const getProvider = async () => {
     const provider = new ethers.JsonRpcProvider(process.env.SEQUENCE_RPC_URL)

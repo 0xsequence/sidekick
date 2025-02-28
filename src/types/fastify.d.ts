@@ -1,5 +1,5 @@
 import '@fastify/redis'
-import { Redis } from 'ioredis'
+import type { Redis } from 'ioredis'
 import 'fastify'
 import type { Queue } from 'bull'
 

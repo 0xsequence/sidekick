@@ -3,12 +3,11 @@ import { getSigner } from "../../../../../utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../../../utils/other';
-import { erc721Abi } from "../../../../../constants/abis/erc721";
 import { TransactionService } from "../../../../../services/transaction.service";
 import { erc1155Abi } from "../../../../../constants/abis/erc1155";
 
 type ERC1155MintRequestBody = {
-    account: string;
+    recipient: string;
     id: string;
     amount: string;
     data: string;
@@ -31,9 +30,9 @@ const ERC1155MintSchema = {
     tags: ['ERC1155'],
     body: {
         type: 'object',
-        required: ['account', 'id', 'amount', 'data'],
+        required: ['recipient', 'id', 'amount', 'data'],
         properties: {
-            account: { type: 'string' },
+            recipient: { type: 'string' },
             id: { type: 'string' },
             amount: { type: 'string' },
             data: { type: 'string' }
@@ -80,7 +79,7 @@ export async function erc1155Mint(fastify: FastifyInstance) {
         schema: ERC1155MintSchema
     }, async (request, reply) => {
         try {
-            const { account, id, amount, data: mintData } = request.body;
+            const { recipient, id, amount, data: mintData } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
@@ -92,7 +91,7 @@ export async function erc1155Mint(fastify: FastifyInstance) {
 
             const data = contract.interface.encodeFunctionData(
                 'mint',
-                [account, id, amount, mintData]
+                [recipient, id, amount, mintData]
             );
 
             const tx = {
@@ -103,7 +102,7 @@ export async function erc1155Mint(fastify: FastifyInstance) {
             const txService = new TransactionService(fastify);
 
             // Create pending transaction first
-            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint", args: [account, id, amount, mintData] } });
+            const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint", args: [recipient, id, amount, mintData] } });
 
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
 

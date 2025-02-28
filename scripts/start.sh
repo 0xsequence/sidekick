@@ -1,14 +1,13 @@
 #!/bin/sh
 
-echo "Waiting for PostgreSQL to be ready..."
-sleep 5
+# Wait for database to be ready
+while ! nc -z $DATABASE_HOST $DATABASE_PORT; do
+  echo "Waiting for database connection..."
+  sleep 1
+done
 
-echo "\n=== Database Connection Details ==="
-echo "DATABASE_URL: postgresql://sidekick:sequence@localhost:5432/sequence_sidekick"
-echo "============================\n"
+# Run migrations
+pnpm prisma migrate deploy
 
-echo "Running database migrations..."
-pnpm prisma migrate deploy --schema=/app/prisma/schema.prisma
-
-echo "Starting the application..."
+# Start the application
 pnpm start 
