@@ -56,7 +56,7 @@ export function createRewardQueue(fastify: FastifyInstance) {
                     contractAddress,
                     data: {
                         functionName: 'transfer (batch)',
-                        args: [recipients, amounts]
+                        args: []
                     }
                 });
 

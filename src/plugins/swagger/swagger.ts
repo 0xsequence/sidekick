@@ -3,7 +3,7 @@ import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 import type { FastifyInstance } from 'fastify'
 
-export default fp(async function (fastify: FastifyInstance) {
+export default fp(async (fastify: FastifyInstance) => {
   await fastify.register(swagger, {
     openapi: {
       info: {

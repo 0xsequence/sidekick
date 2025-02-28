@@ -1,15 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
-import type { TransactionResponse } from "ethers";
+import type { InterfaceAbi, TransactionResponse } from "ethers";
 import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../utils/other'
 import { TransactionService } from '../../../services/transaction.service';
 import { AbiSchema } from "../../../schemas/contractSchemas";
-
 // Types for request/response
 type WriteRequestBody = {
-    abi?: Array<ethers.InterfaceAbi>;
-    args?: Array<string | number | boolean>;
+    abi?: InterfaceAbi;
+    args?: Array<string>;
 }
 
 type WriteRequestParams = {
@@ -102,7 +101,7 @@ export async function writeContract(fastify: FastifyInstance) {
             // Get the signer to use for the transaction
             const signer = await getSigner(chainId);
 
-            let abiFromDb: Array<ethers.InterfaceAbi> | undefined;
+            let abiFromDb: ethers.InterfaceAbi | undefined;
             if (!abiFromBody) {
                 const contract = await fastify.prisma.contract.findUnique({
                     where: {
@@ -136,7 +135,7 @@ export async function writeContract(fastify: FastifyInstance) {
             // Create contract instance with full ABI
             const contract = new ethers.Contract(
                 contractAddress,
-                abiFromBody ?? abiFromDb!,
+                abiFromBody ?? abiFromDb ?? [],
                 signer
             );
 

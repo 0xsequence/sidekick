@@ -12,6 +12,10 @@ type ImportContractsRequestParams = {
     projectId: string;
 }
 
+interface BuilderApiResponse {
+    contracts: Contract[];
+}
+
 const importContractsSchema = {
     tags: ['Contract'],
     params: {
@@ -83,8 +87,8 @@ export async function importContracts(fastify: FastifyInstance) {
                 })
             });
 
-            const data: any = await response.json();
-            const contracts: Contract[] = data.contracts;
+            const data = await response.json() as BuilderApiResponse;
+            const contracts = data?.contracts ?? [];
             console.log('Contracts: ', contracts);
 
             // Now add these contracts to the database, check by id if they exist, if they do then update them, if they don't then create them
@@ -92,8 +96,16 @@ export async function importContracts(fastify: FastifyInstance) {
                 contracts.map(contract =>
                     fastify.prisma.contract.upsert({
                         where: { id: contract.id },
-                        update: { ...contract, addedBy: 'builder' },
-                        create: { ...contract, addedBy: 'builder' }
+                        update: { 
+                            ...contract,
+                            abi: contract.abi ? JSON.stringify(contract.abi) : null,
+                            addedBy: 'builder' 
+                        },
+                        create: { 
+                            ...contract,
+                            abi: contract.abi ? JSON.stringify(contract.abi) : null,
+                            addedBy: 'builder' 
+                        }
                     })
                 )
             );

@@ -31,7 +31,7 @@ services:
     
   sequence_sidekick:
     build: .
-    container_name: sequence_sidekick
+    container_name: server
     restart: always
     depends_on:
       postgres:
@@ -51,7 +51,6 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - SEQUENCE_RPC_URL=${SEQUENCE_RPC_URL}
       - BUILDER_API_SECRET_KEY=${BUILDER_API_SECRET_KEY}
-      - INDEXER_SECRET_KEY=${INDEXER_SECRET_KEY}
       - INDEXER_URL=${INDEXER_URL}
       - SIGNER_TYPE=${SIGNER_TYPE}
       # AWS KMS configs

@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
-import { ethers } from "ethers";
+import { ethers, type InterfaceAbi } from "ethers";
 
 // Types for request/response
 type ReadRequestBody = {
-    abi?: Array<Object>;   
-    args?: Array<any>;  
+    abi?: InterfaceAbi;   
+    args?: Array<unknown>;  
 }
 
 type ReadContractResponse = {
@@ -83,7 +83,7 @@ export async function readContract(fastify: FastifyInstance) {
 
             const provider = await getSigner(chainId);
 
-            let abiFromDb: Array<Object> | undefined;
+            let abiFromDb: InterfaceAbi | undefined;
             if (!abiFromBody) {
                 const contract = await fastify.prisma.contract.findUnique({
                     where: {
@@ -114,7 +114,7 @@ export async function readContract(fastify: FastifyInstance) {
 
             const contract = new ethers.Contract(
                 contractAddress,
-                abiFromBody ?? abiFromDb!,
+                abiFromBody ?? abiFromDb ?? [],
                 provider
             );
 

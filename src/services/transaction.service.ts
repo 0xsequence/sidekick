@@ -34,7 +34,7 @@ export class TransactionService {
                 to: params.contractAddress,
                 data: params.data ?? encodedData ?? '',
                 status: 'done',
-                args: params.args?.map(arg => arg.toString()) ?? [],
+                argsJson: JSON.stringify(params.args),
                 functionName: params.functionName ?? '',
                 isDeployTx: params.isDeployTx ?? false,
             }
@@ -61,7 +61,7 @@ export class TransactionService {
                 to: params.contractAddress,
                 data: "",
                 status: 'pending',
-                args: params.data.args.map(arg => arg.toString()),
+                argsJson: JSON.stringify(params.data.args),
                 functionName: params.data.functionName,
             }
         });
