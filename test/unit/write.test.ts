@@ -6,7 +6,7 @@ import { erc721Abi } from '../../src/constants/abis/erc721'
 
 describe('Contract Write', () => {
 
-    const { chainId, erc20ContractAddress, erc721ContractAddress, recipient, secretKey, sidekickSmartWallet } = setup()
+    const { chainId, erc20ContractAddress, erc721ContractAddress, recipient, secretKey } = setup()
 
     it.skip('should transfer ERC20 tokens from sidekick smart wallet to recipient', async () => {
         const functionName = 'transfer'

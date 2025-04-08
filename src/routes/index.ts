@@ -34,6 +34,7 @@ import { erc721Deploy } from './contract/deploy/erc721';
 import { erc1155Deploy } from './contract/deploy/erc1155';
 import { erc20Deploy } from './contract/deploy/erc20';
 import { deployContract } from './contract/deploy/contract';
+import { ChainId } from '@0xsequence/network';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -43,10 +44,24 @@ export default async function (fastify: FastifyInstance) {
         });
     });
 
-    //   Get sidekick owner address
-    fastify.get('/sidekick/smart-account-address', async (request, reply) => {
-        const chainId = '1';
-        const signer = await getSigner(chainId);
+    // Get sidekick wallet address
+    // A Sequence smart wallet is created for your PRIVATE KEY
+    fastify.get('/sidekick/wallet-address', {
+        schema: {
+            description: 'Get the Sequence smart wallet address for your Sidekick',
+            tags: ['Sidekick'],
+            response: {
+                200: {
+                    type: 'object',
+                    properties: {
+                        address: { type: 'string', description: 'The wallet address' }
+                    }
+                }
+            }
+        }
+    }, async (request, reply) => {
+        const chainId = ChainId.MAINNET
+        const signer = await getSigner(chainId.toString());
         return reply.code(200).send({
             address: await signer.getAddress()
         });

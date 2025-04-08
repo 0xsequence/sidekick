@@ -2,7 +2,6 @@ import type { FastifyInstance } from 'fastify';
 import { prisma } from '../../lib/prisma';
 import { Type } from '@sinclair/typebox';
 import { TransactionSchema } from '../../schemas/transactionSchemas';
-import type { Transaction } from '@prisma/client';
 
 type GetTransactionByHashParams = {
     txHash: string;
@@ -11,7 +10,7 @@ type GetTransactionByHashParams = {
 type GetTransactionByHashResponse = {
     result?: {
         data: {
-            transaction: Transaction | null;
+            transaction: any;
         }
         error?: string;
     }

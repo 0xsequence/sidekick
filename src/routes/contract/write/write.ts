@@ -96,7 +96,6 @@ export async function writeContract(fastify: FastifyInstance) {
         try {
             const { args, abi: abiFromBody } = request.body;
             const { chainId, contractAddress, functionName } = request.params;
-            // TODO: Check if the contract is deployed on the chain from params
 
             // Get the signer to use for the transaction
             const signer = await getSigner(chainId);

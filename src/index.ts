@@ -31,6 +31,12 @@ const fastify = Fastify({
     }
 });
 
+// Register rate limit
+await fastify.register(import('@fastify/rate-limit'), {
+    max: 1000,
+    timeWindow: '1 minute'
+})
+
 // Register CORS
 await fastify.register(cors, {
     origin: true, // Allow all origins in development

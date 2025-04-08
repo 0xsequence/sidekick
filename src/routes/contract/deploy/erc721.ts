@@ -104,6 +104,7 @@ export async function erc721Deploy(fastify: FastifyInstance) {
                 contractAddress: receipt?.contractAddress ?? '',
                 abi: erc721Abi,
                 data,
+                txHash: receipt?.hash ?? '',
                 isDeployTx: true
             })
 

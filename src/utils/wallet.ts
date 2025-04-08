@@ -5,8 +5,8 @@ import { ethers } from "ethers";
 import { GoogleKmsSigner } from "@0xsequence/google-kms-signer";
 import { AwsKmsSigner } from "@0xsequence/aws-kms-signer";
 
-export const getProvider = async () => {
-    const provider = new ethers.JsonRpcProvider(process.env.SEQUENCE_RPC_URL)
+export const getProvider = async (chainConfig: NetworkConfig) => {
+    const provider = new ethers.JsonRpcProvider(process.env.SEQUENCE_RPC_URL, chainConfig.chainId)
     return provider
 }
 
@@ -18,10 +18,9 @@ export const getLocalSigner = async (chainHandle: string) => {
             throw new Error(`Chain config not found for chain handle: ${chainHandle}`)
         }
 
-        const provider = await getProvider()
+        const provider = await getProvider(chainConfig)
 
         const walletEOA = new ethers.Wallet(process.env.EVM_PRIVATE_KEY ?? '', provider);
-
         const smartAccount = await Session.singleSigner({
             signer: walletEOA,
             projectAccessKey: process.env.PROJECT_ACCESS_KEY ?? ''
