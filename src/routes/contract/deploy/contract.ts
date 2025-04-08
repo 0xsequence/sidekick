@@ -101,6 +101,7 @@ export async function deployContract(fastify: FastifyInstance) {
                 contractAddress: receipt?.contractAddress ?? '',
                 abi,
                 data,
+                txHash: receipt?.hash ?? '',
                 isDeployTx: true
             })
 

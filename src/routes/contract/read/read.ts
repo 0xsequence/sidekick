@@ -1,11 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
 import { ethers, type InterfaceAbi } from "ethers";
+import { AbiSchema } from "../../../schemas/contractSchemas";
 
 // Types for request/response
 type ReadRequestBody = {
     abi?: InterfaceAbi;   
-    args?: Array<unknown>;  
+    args?: Array<string>;  
 }
 
 type ReadContractResponse = {
@@ -27,13 +28,14 @@ const ReadContractSchema = {
     body: {
         type: 'object',
         properties: {
-            abi: {
-                type: 'array',
-                description: 'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.',
-            },
             args: {
                 type: 'array',
-                description: 'Array of function arguments',
+                description: 'JSON stringified array of function arguments'
+            },
+            abi: {
+                type: 'array',
+                items: AbiSchema,
+                description: 'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.'
             }
         }
     },
@@ -41,9 +43,18 @@ const ReadContractSchema = {
         type: 'object',
         required: ['chainId', 'contractAddress', 'functionName'],
         properties: {
-            chainId: { type: 'string' },
-            contractAddress: { type: 'string' },
-            functionName: { type: 'string' }
+            chainId: {
+                type: 'string',
+                description: 'Chain ID of the network'
+            },
+            contractAddress: {
+                type: 'string',
+                description: 'Contract address'
+            },
+            functionName: {
+                type: 'string',
+                description: 'Function name to call'
+            }
         }
     },
     headers: {

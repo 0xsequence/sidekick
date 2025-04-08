@@ -10,6 +10,7 @@ export class TransactionService {
         chainId: string;
         contractAddress: string;
         abi: Array<unknown>;
+        txHash?: string | undefined;
         data?: string | undefined;
         functionName?: string | undefined;
         args?: Array<string> | undefined;
@@ -28,7 +29,7 @@ export class TransactionService {
 
         const pendingTx = await this.fastify.prisma.transaction.create({
             data: {
-                hash: "",
+                hash: params.txHash ?? '',
                 chainId: Number(params.chainId),
                 from: await signer.getAddress(),
                 to: params.contractAddress,

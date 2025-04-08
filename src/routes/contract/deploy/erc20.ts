@@ -97,11 +97,14 @@ export async function erc20Deploy(fastify: FastifyInstance) {
                 throw new Error('Transaction reverted');
             }
 
+            console.log('RECEIPT', receipt)
+
             await txService.createTransaction({
                 chainId,
                 contractAddress: receipt?.contractAddress ?? '',
                 abi: erc20Abi,
                 data,
+                txHash: receipt?.hash ?? '',
                 isDeployTx: true    
             })
 
