@@ -83,7 +83,7 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 
             const data = encodeDeployData({
                 abi: erc20Abi,
-                bytecode: `0x${erc20bytecode}`,
+                bytecode: erc20bytecode as `0x${string}`,
                 args: [initialOwner, name, symbol]
             })
 
@@ -96,8 +96,6 @@ export async function erc20Deploy(fastify: FastifyInstance) {
             if(receipt?.status === 0) {
                 throw new Error('Transaction reverted');
             }
-
-            console.log('RECEIPT', receipt)
 
             await txService.createTransaction({
                 chainId,

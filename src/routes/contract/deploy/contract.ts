@@ -77,12 +77,22 @@ export async function deployContract(fastify: FastifyInstance) {
             const { chainId } = request.params;
             const { args, abi, bytecode } = request.body;
 
+            if(!bytecode.startsWith('0x')) {
+                return reply.code(400).send({
+                    result: {
+                        txHash: null,
+                        txUrl: null,
+                        error: 'Bytecode must start with 0x'
+                    }
+                });
+            }
+
             const signer = await getSigner(chainId);
             const txService = new TransactionService(fastify);
 
             const data = encodeDeployData({
                 abi,
-                bytecode: `0x${bytecode}`,
+                bytecode: bytecode as `0x${string}`,
                 args
             })
 
