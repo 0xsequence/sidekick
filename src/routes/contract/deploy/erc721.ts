@@ -4,6 +4,7 @@ import { encodeDeployData } from "viem";
 import { erc721bytecode } from "../../../constants/bytecodes/erc721";
 import { erc721Abi } from "../../../constants/abis/erc721";
 import { TransactionService } from "../../../services/transaction.service";
+import { getBlockExplorerUrl } from "../../../utils/other";
 
 type ERC721DeployRequestBody = {
     defaultAdmin: string;
@@ -111,7 +112,7 @@ export async function erc721Deploy(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: receipt?.hash ?? null,
-                    txUrl: `https://${chainId}.etherscan.io/tx/${receipt?.hash}`
+                    txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? '')
                 }
             });
 

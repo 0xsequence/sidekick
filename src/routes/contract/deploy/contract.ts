@@ -3,6 +3,7 @@ import { getSigner } from "../../../utils/wallet";
 import { encodeDeployData } from "viem";
 import { TransactionService } from "../../../services/transaction.service";
 import type { ethers } from "ethers";
+import { getBlockExplorerUrl } from "../../../utils/other";
 
 type DeployContractRequestBody = {
     abi: Array<ethers.InterfaceAbi>;
@@ -108,7 +109,7 @@ export async function deployContract(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: receipt?.hash ?? null,
-                    txUrl: `https://${chainId}.etherscan.io/tx/${receipt?.hash}`
+                    txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? '')
                 }
             });
 

@@ -1,6 +1,5 @@
 import type { NetworkConfig } from "@0xsequence/network"
 import { findSupportedNetwork } from "@0xsequence/network"
-import type { Interface } from "ethers"
 import { ethers } from "ethers"
 
 // Helper function to validate Ethereum addresses
@@ -13,5 +12,5 @@ export const getBlockExplorerUrl = (chainId: number, txHash: string): string => 
     // Add more networks as needed
     const chainConfig: NetworkConfig = findSupportedNetwork(chainId)!
     const baseUrl = chainConfig.blockExplorer?.rootUrl
-    return baseUrl ? `${baseUrl}/tx/${txHash}` : ''
+    return baseUrl ? `${baseUrl}tx/${txHash}` : ''
 }
