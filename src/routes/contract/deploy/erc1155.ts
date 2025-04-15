@@ -84,7 +84,7 @@ export async function erc1155Deploy(fastify: FastifyInstance) {
 
             const data = encodeDeployData({
                 abi: erc1155Abi,
-                bytecode: `0x${erc1155bytecode}`,
+                bytecode: erc1155bytecode as `0x${string}`,
                 args: [defaultAdmin, minter, name]
             })
 
