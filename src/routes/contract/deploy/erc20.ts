@@ -4,6 +4,7 @@ import { encodeDeployData } from "viem";
 import { erc20Abi } from "../../../constants/abis/erc20";
 import { erc20bytecode } from "../../../constants/bytecodes/erc20";
 import { TransactionService } from "../../../services/transaction.service";
+import { getBlockExplorerUrl } from "../../../utils/other";
 
 type ERC20DeployRequestBody = {
     initialOwner: string;
@@ -111,7 +112,7 @@ export async function erc20Deploy(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: receipt?.hash ?? null,
-                    txUrl: `https://${chainId}.etherscan.io/tx/${receipt?.hash}`
+                    txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? '')
                 }
             });
 
