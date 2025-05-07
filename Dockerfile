@@ -22,7 +22,7 @@ COPY pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Generate Prisma Client
 RUN pnpm prisma generate
