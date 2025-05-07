@@ -33,6 +33,9 @@ const WriteContractSchema = {
         properties: {
             args: {
                 type: 'array',
+                items: {
+                    type: 'string'
+                },
                 description: 'JSON stringified array of function arguments'
             },
             abi: {
