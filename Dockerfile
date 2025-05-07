@@ -7,12 +7,6 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm
 
-# Install typescript
-RUN pnpm add -g typescript
-
-# Check if typescript is installed
-RUN tsc --version
-
 # Install netcat for database health check
 RUN apk add --no-cache netcat-openbsd
 
