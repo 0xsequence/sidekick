@@ -65,6 +65,8 @@ services:
       - CRYPTO_KEY=${CRYPTO_KEY}
       - CRYPTO_KEY_VERSION=${CRYPTO_KEY_VERSION}
       - NODE_ENV=development
+      # Local Signer configs
+      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
       
     command: ["/bin/sh", "-c", "npx prisma migrate reset --force && npx prisma migrate deploy && pnpm start"]
 
