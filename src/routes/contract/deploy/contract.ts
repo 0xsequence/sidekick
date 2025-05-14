@@ -129,7 +129,7 @@ export async function deployContract(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
-                    error: error instanceof Error ? error.message : 'Failed to mint NFT'
+                    error: error instanceof Error ? error.message : 'Failed to deploy contract'
                 }
             });
         }
