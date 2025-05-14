@@ -36,6 +36,7 @@ import { erc20Deploy } from './contract/deploy/erc20';
 import { deployContract } from './contract/deploy/contract';
 import { ChainId } from '@0xsequence/network';
 import { erc721Burn } from './contract/extensions/erc721/write/burn';
+import { erc721ItemsMint } from './contract/extensions/erc721/erc721Items/write/mint';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -94,6 +95,9 @@ export default async function (fastify: FastifyInstance) {
     erc1155MinterRole(fastify);
     erc1155BalanceOf(fastify);
 
+    // Register erc721Items routes
+    erc721ItemsMint(fastify);
+    
     // Register is deployed route
     isDeployed(fastify);
 
