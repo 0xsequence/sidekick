@@ -27,15 +27,9 @@ COPY . .
 # Build the application
 RUN pnpm run build
 
-# Make start script executable
-RUN chmod +x scripts/start.sh
-
 # Expose the port the app runs on
 EXPOSE 3000
 
 # Set environment variables
 ENV HOST=0.0.0.0
 ENV PORT=3000
-
-# Command to run the application
-CMD ["/app/scripts/start.sh"]
