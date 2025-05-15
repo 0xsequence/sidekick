@@ -181,5 +181,3 @@ Thumbs.db
 # Database
 *.db
 dump.rdb
-prisma/migrations/*
-!prisma/migrations/init.sql
