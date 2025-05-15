@@ -68,7 +68,7 @@ services:
       # Local Signer configs
       - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
       
-    command: ["/bin/sh", "-c", "npx prisma migrate reset --force && npx prisma migrate deploy && pnpm start"]
+    command: ["/bin/sh", "-c", "npx prisma migrate reset --force && pnpm prisma migrate dev --name init && npx prisma migrate deploy && pnpm start"]
 
 volumes:
   postgres_data:
