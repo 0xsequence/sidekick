@@ -26,6 +26,7 @@ model Transaction {
 
 model Contract {
   id                        Int       @id @default(autoincrement())
+  builderId                 Int?      @unique
   projectId                 Int?
   contractName              String
   contractAddress           String    @unique

@@ -113,7 +113,8 @@ export async function deployContract(fastify: FastifyInstance) {
                 abi,
                 data,
                 txHash: receipt?.hash ?? '',
-                isDeployTx: true
+                isDeployTx: true,
+                args
             })
 
             return reply.code(200).send({
