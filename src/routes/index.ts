@@ -37,6 +37,11 @@ import { deployContract } from './contract/deploy/contract';
 import { ChainId } from '@0xsequence/network';
 import { erc721Burn } from './contract/extensions/erc721/write/burn';
 import { erc721ItemsMint } from './contract/extensions/erc721/erc721Items/write/mint';
+import { erc721ItemsDeploy } from './contract/deploy/erc721Items';
+import { deployUpgradeableContract } from './contract/deploy/upgradeableContract';
+import { erc721ItemsBurn } from './contract/extensions/erc721/erc721Items/write/burn';
+import { erc721ItemsBatchBurn } from './contract/extensions/erc721/erc721Items/write/batchBurn';
+import { erc721ItemsInitialize } from './contract/extensions/erc721/erc721Items/write/initialize';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -97,15 +102,20 @@ export default async function (fastify: FastifyInstance) {
 
     // Register erc721Items routes
     erc721ItemsMint(fastify);
+    erc721ItemsBurn(fastify);
+    erc721ItemsBatchBurn(fastify);
+    erc721ItemsInitialize(fastify);
     
     // Register is deployed route
     isDeployed(fastify);
 
     // Register deploy routes
     erc721Deploy(fastify);
+    erc721ItemsDeploy(fastify);
     erc20Deploy(fastify);
     erc1155Deploy(fastify);
     deployContract(fastify);
+    deployUpgradeableContract(fastify);
 
     // Register transactions route
     getTransactions(fastify);
