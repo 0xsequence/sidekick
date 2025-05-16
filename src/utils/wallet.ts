@@ -6,7 +6,7 @@ import { GoogleKmsSigner } from "@0xsequence/google-kms-signer";
 import { AwsKmsSigner } from "@0xsequence/aws-kms-signer";
 
 export const getProvider = async (chainConfig: NetworkConfig) => {
-    const provider = new ethers.JsonRpcProvider(process.env.SEQUENCE_RPC_URL, chainConfig.chainId)
+    const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl, chainConfig.chainId)
     return provider
 }
 
