@@ -42,6 +42,11 @@ import { deployUpgradeableContract } from './contract/deploy/upgradeableContract
 import { erc721ItemsBurn } from './contract/extensions/erc721/erc721Items/write/burn';
 import { erc721ItemsBatchBurn } from './contract/extensions/erc721/erc721Items/write/batchBurn';
 import { erc721ItemsInitialize } from './contract/extensions/erc721/erc721Items/write/initialize';
+import { erc1155ItemsMint } from './contract/extensions/erc1155/erc1155Items/write/mint';
+import { erc1155ItemsBurn } from './contract/extensions/erc1155/erc1155Items/write/burn';
+import { erc1155ItemsInitialize } from './contract/extensions/erc1155/erc1155Items/write/initialize';
+import { erc1155ItemsBatchBurn } from './contract/extensions/erc1155/erc1155Items/write/batchBurn';
+import { erc1155ItemsDeploy } from './contract/deploy/erc1155Items';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -105,6 +110,12 @@ export default async function (fastify: FastifyInstance) {
     erc721ItemsBurn(fastify);
     erc721ItemsBatchBurn(fastify);
     erc721ItemsInitialize(fastify);
+
+    // Register erc1155Items routes
+    erc1155ItemsMint(fastify);
+    erc1155ItemsBurn(fastify);
+    erc1155ItemsBatchBurn(fastify);
+    erc1155ItemsInitialize(fastify);
     
     // Register is deployed route
     isDeployed(fastify);
@@ -114,6 +125,7 @@ export default async function (fastify: FastifyInstance) {
     erc721ItemsDeploy(fastify);
     erc20Deploy(fastify);
     erc1155Deploy(fastify);
+    erc1155ItemsDeploy(fastify);
     deployContract(fastify);
     deployUpgradeableContract(fastify);
 
