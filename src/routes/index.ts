@@ -47,6 +47,7 @@ import { erc1155ItemsBurn } from './contract/extensions/erc1155/erc1155Items/wri
 import { erc1155ItemsInitialize } from './contract/extensions/erc1155/erc1155Items/write/initialize';
 import { erc1155ItemsBatchBurn } from './contract/extensions/erc1155/erc1155Items/write/batchBurn';
 import { erc1155ItemsDeploy } from './contract/deploy/erc1155Items';
+import testErrorRoute from './test-error';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -150,4 +151,7 @@ export default async function (fastify: FastifyInstance) {
     stopRewards(fastify);
     getJobs(fastify);
     cleanJobs(fastify);
+
+    // Test error route for Prometheus alert testing
+    await testErrorRoute(fastify);
 }
