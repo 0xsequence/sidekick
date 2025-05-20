@@ -104,6 +104,13 @@ services:
       - prometheus
     restart: always
 
+  blackbox:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox
+    ports:
+      - "9115:9115"
+    restart: always
+
 volumes:
   postgres_data:
   redis_data:
