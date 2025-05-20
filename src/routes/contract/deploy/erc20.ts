@@ -63,6 +63,17 @@ const ERC20DeploySchema = {
                     }
                 }
             }
+        },
+        500: {
+            type: 'object',
+            properties: {
+                    result: {
+                        type: 'object',
+                        properties: {
+                        error: { type: 'string' }
+                    }
+                }
+            }
         }
     }
 }
@@ -120,7 +131,7 @@ export async function erc20Deploy(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
-                    error: error instanceof Error ? error.message : 'Failed to mint NFT'
+                    error: error instanceof Error ? error.message : 'Failed to deploy ERC20'
                 }
             });
         }
