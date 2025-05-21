@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc721Abi } from "../../../../../constants/abis/erc721";
 import { TransactionService } from "../../../../../services/transaction.service";
+import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
 
 type ERC721SafeMintRequestBody = {
     to: string;
@@ -75,10 +76,14 @@ export async function erc721SafeMint(fastify: FastifyInstance) {
         schema: ERC721SafeMintSchema
     }, async (request, reply) => {
         try {
+            logRequest(request);
+
             const { to, tokenId } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
+            logStep(request, 'Tx signer received', { signer: signer.account.address });
+
             const contract = new ethers.Contract(
                 contractAddress,
                 erc721Abi,
@@ -89,22 +94,25 @@ export async function erc721SafeMint(fastify: FastifyInstance) {
                 'safeMint',
                 [to, tokenId]
             );
+            logStep(request, 'Function data encoded');
 
             const tx = {
                 to: contractAddress,
                 data
-            }
-
+            };
             const txService = new TransactionService(fastify);
 
-            // Create pending transaction first
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "safeMint", args: [to, tokenId] } });
-
+            logStep(request, 'Pending transaction added in db');
+            
+            logStep(request, 'Sending transaction...');
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+            logStep(request, 'Transaction sent', { txResponse });
 
-            // Update transaction status
+            logStep(request, 'Updating transaction status in db');
             await txService.updateTransactionStatus(pendingTx.id, txResponse);
 
+            logStep(request, 'Transaction success', { txHash: txResponse.hash });
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
@@ -113,7 +121,10 @@ export async function erc721SafeMint(fastify: FastifyInstance) {
             });
 
         } catch (error) {
-            request.log.error(error);
+            logError(request, error, {
+                params: request.params,
+                body: request.body
+            });
             return reply.code(500).send({
                 result: {
                     txHash: null,

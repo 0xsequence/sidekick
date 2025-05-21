@@ -2,8 +2,9 @@ import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
 import { encodeDeployData, encodeFunctionData } from "viem";
 import { TransactionService } from "../../../services/transaction.service";
-import { getBlockExplorerUrl } from "../../../utils/other";
+import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
 import { ethers } from "ethers"; 
+import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
 
 type DeployUpgradeableContractRequestBody = {
     implementationAbi: Array<ethers.InterfaceAbi>;
@@ -22,7 +23,7 @@ type DeployUpgradeableContractResponse = {
         deploymentTxUrl?: string | null;
         initializationTxHash: string | null;
         initializationTxUrl: string | null;
-        contractAddress: string | null;
+        deployedContractAddress: string | null;
         error?: string;
     };
 };
@@ -70,7 +71,7 @@ const DeployUpgradeableContractSchema = {
                         deploymentTxUrl: { type: 'string', nullable: true },
                         initializationTxHash: { type: 'string' },
                         initializationTxUrl: { type: 'string' },
-                        contractAddress: { type: 'string' },
+                        deployedContractAddress: { type: 'string' },
                         error: { type: 'string', nullable: true },
                     },
                 },
@@ -113,6 +114,7 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             try {
+                logRequest(request);
                 const { chainId } = request.params;
                 const {
                     implementationAbi,
@@ -121,6 +123,7 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
                     initializeArgs,
                 } = request.body;
 
+                logStep(request, 'Validating implementation bytecode');
                 if (!implementationBytecode.startsWith('0x')) {
                     return reply.code(400).send({
                         result: {
@@ -128,55 +131,56 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
                             deploymentTxUrl: null,
                             initializationTxHash: null,
                             initializationTxUrl: null,
-                            contractAddress: null,
+                            deployedContractAddress: null,
                             error: 'Implementation bytecode must start with 0x',
                         },
                     });
                 }
 
+                logStep(request, 'Getting tx signer');
                 const signer = await getSigner(chainId);
                 if (!signer || !signer.account?.address) {
-                    request.log.error('Signer account or address is null or undefined. Check getSigner implementation and EVM_PRIVATE_KEY.');
+                    logError(request, new Error('Signer not configured correctly.'), { signer });
                     throw new Error('Signer not configured correctly.');
                 }
-                request.log.info(`Using signer address: ${signer.account.address} for deploying upgradeable contract on chain ${chainId}`);
-
+                logStep(request, 'Tx signer received', { signer: signer.account.address });
                 const txService = new TransactionService(fastify);
 
                 // Step 1: Deploy the implementation contract
+                logStep(request, 'Preparing deploy data', {
+                    abi: implementationAbi,
+                    bytecode: implementationBytecode,
+                    args: []
+                });
                 const deployData = encodeDeployData({
                     abi: implementationAbi,
                     bytecode: implementationBytecode as `0x${string}`,
-                    args: [], // Standard for UUPS/Transparent proxy implementations
+                    args: [],
                 });
+                logStep(request, 'Deploy data prepared');
 
-                request.log.info(`Sending implementation deployment transaction for chainId: ${chainId}`);
+                logStep(request, 'Sending implementation deployment transaction');
                 const deployTxResponse = await signer.sendTransaction({
                     data: deployData,
                 });
-                request.log.info(`Implementation deployment transaction sent: ${deployTxResponse.hash}`);
+                logStep(request, 'Implementation deployment transaction sent');
                 
+                logStep(request, 'Waiting for implementation deployment receipt', { txHash: deployTxResponse.hash });
                 const deployReceipt = await deployTxResponse.wait();
-                request.log.info(`Implementation deployment transaction mined: ${deployReceipt?.hash}, status: ${deployReceipt?.status}`);
+                logStep(request, 'Implementation deployment receipt received', { deployReceipt });
 
                 if (deployReceipt?.status === 0) {
-                    request.log.error(`Implementation deployment transaction reverted: ${deployReceipt?.hash}`);
+                    logError(request, new Error('Implementation contract deployment transaction reverted'), { deployReceipt });
                     throw new Error('Implementation contract deployment transaction reverted');
                 }
 
-                const contractCreatedEvent = deployReceipt?.logs.find(log =>
-                    log.topics.includes(ethers.id('CreatedContract(address)'))
-                )
-
-                const deployedContractAddress = ethers.getAddress(
-                    ethers.zeroPadValue(ethers.stripZerosLeft(contractCreatedEvent?.data ?? ''), 20)
-                )
+                const deployedContractAddress = getContractAddressFromEvent(deployReceipt, 'CreatedContract(address)');
 
                 if (!deployedContractAddress) {
-                    request.log.error('Contract address not found after implementation deployment.');
+                    logError(request, new Error('Contract address not found after implementation deployment.'), { deployReceipt });
                     throw new Error('Contract address not found after implementation deployment. This can happen if the transaction failed or is not a contract creation.');
                 }
-                request.log.info(`Implementation contract deployed at: ${deployedContractAddress} on chainId: ${chainId}`);
+                logStep(request, 'Implementation contract deployed', { deployedContractAddress });
 
                 await txService.createTransaction({
                     chainId,
@@ -188,28 +192,31 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
                 });
 
                 // Step 2: Initialize the contract
-                request.log.info(`Encoding initialize function '${initializeFunctionName}' for contract ${deployedContractAddress}`);
+                logStep(request, `Encoding initialize function data for '${initializeFunctionName}'`);
                 const initializeData = encodeFunctionData({
                     abi: implementationAbi,
                     functionName: initializeFunctionName,
                     args: initializeArgs,
                 });
+                logStep(request, 'Initialize data prepared', { initializeData });
 
-                request.log.info(`Sending initialization transaction to ${deployedContractAddress} for function '${initializeFunctionName}'`);
+                logStep(request, `Sending initialization transaction to ${deployedContractAddress} for function '${initializeFunctionName}'`);
                 const initializeTxResponse = await signer.sendTransaction({
                     to: deployedContractAddress,
                     data: initializeData,
                 });
-                request.log.info(`Initialization transaction sent: ${initializeTxResponse.hash}`);
+                logStep(request, 'Initialization transaction sent', { initializationTxHash: initializeTxResponse.hash });
 
+                logStep(request, 'Waiting for initialization receipt');
                 const initializeReceipt = await initializeTxResponse.wait();
-                request.log.info(`Initialization transaction mined: ${initializeReceipt?.hash}, status: ${initializeReceipt?.status}`);
+                logStep(request, 'Initialization receipt received', { initializeReceipt });
 
                 if (initializeReceipt?.status === 0) {
-                    request.log.error(`Initialization transaction reverted: ${initializeReceipt?.hash}`);
+                    logError(request, new Error(`Contract initialization transaction for function '${initializeFunctionName}' reverted`), { initializeReceipt });
                     throw new Error(`Contract initialization transaction for function '${initializeFunctionName}' reverted`);
                 }
 
+                logStep(request, 'Creating transaction record in db');
                 await txService.createTransaction({
                     chainId,
                     contractAddress: deployedContractAddress, 
@@ -221,26 +228,30 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
                     isDeployTx: false,
                 });
 
+                logStep(request, 'Deploy and initialize success');
+
                 return reply.code(200).send({
                     result: {
                         deploymentTxHash: deployReceipt?.hash ?? null,
                         deploymentTxUrl: getBlockExplorerUrl(Number(chainId), deployReceipt?.hash ?? ''),
                         initializationTxHash: initializeReceipt?.hash ?? null,
                         initializationTxUrl: getBlockExplorerUrl(Number(chainId), initializeReceipt?.hash ?? ''),
-                        contractAddress: deployedContractAddress,
+                        deployedContractAddress: deployedContractAddress,
                     },
                 });
             } catch (error) {
-                request.log.error(error, 'Failed to deploy and initialize upgradeable contract');
+                logError(request, error, {
+                    params: request.params,
+                    body: request.body
+                });
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error during upgradeable contract deployment';
-                // Ensure the error object structure matches the schema for 500 responses
                 return reply.code(500).send({
                     result: {
                         deploymentTxHash: null,
                         deploymentTxUrl: null,
                         initializationTxHash: null,
                         initializationTxUrl: null,
-                        contractAddress: null,
+                        deployedContractAddress: null,
                         error: errorMessage,
                     },
                 });

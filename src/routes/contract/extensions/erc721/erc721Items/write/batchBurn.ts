@@ -4,6 +4,7 @@ import { encodeFunctionData, type Abi } from "viem";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { erc721ItemsAbi } from "../../../../../../constants/abis/erc721Items";
+import { logRequest, logStep, logError } from '../../../../../../utils/loggingUtils';
 
 type ERC721ItemsBatchBurnRequestBody = {
     tokenIds: string[]; 
@@ -79,15 +80,17 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
             schema: ERC721ItemsBatchBurnSchema,
         },
         async (request, reply) => {
+            logRequest(request);
             try {
                 const { chainId, contractAddress } = request.params;
                 const { tokenIds } = request.body;
 
                 const signer = await getSigner(chainId);
                 if (!signer || !signer.account?.address) {
-                    request.log.error('Signer account or address is null or undefined.');
+                    logError(request, new Error('Signer not configured correctly.'), { signer });
                     throw new Error('Signer not configured correctly.');
                 }
+                logStep(request, 'Tx signer received', { signer: signer.account.address });
                 const txService = new TransactionService(fastify);
 
                 const batchBurnData = encodeFunctionData({
@@ -95,19 +98,20 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
                     functionName: 'batchBurn',
                     args: [tokenIds.map(id => BigInt(id))],
                 });
+                logStep(request, 'Function data encoded', { tokenIds });
 
-                request.log.info(`Sending batchBurn transaction for tokens ${tokenIds.join(', ')} to ${contractAddress} on chain ${chainId}`);
+                logStep(request, 'Sending batchBurn transaction...');
                 const txResponse = await signer.sendTransaction({
                     to: contractAddress,
                     data: batchBurnData,
                 });
-                request.log.info(`BatchBurn transaction sent: ${txResponse.hash}`);
+                logStep(request, 'BatchBurn transaction sent', { txResponse });
 
                 const receipt = await txResponse.wait();
-                request.log.info(`BatchBurn transaction mined: ${receipt?.hash}, status: ${receipt?.status}`);
+                logStep(request, 'BatchBurn transaction mined', { receipt });
 
                 if (receipt?.status === 0) {
-                    request.log.error(`BatchBurn transaction reverted: ${receipt?.hash}`);
+                    logError(request, new Error('BatchBurn transaction reverted'), { receipt });
                     throw new Error('BatchBurn transaction reverted');
                 }
 
@@ -121,7 +125,9 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
                     args: tokenIds,
                     isDeployTx: false,
                 });
+                logStep(request, 'Transaction record created in db');
 
+                logStep(request, 'BatchBurn transaction success', { txHash: receipt?.hash });
                 return reply.code(200).send({
                     result: {
                         txHash: receipt?.hash ?? null,
@@ -129,7 +135,10 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
                     },
                 });
             } catch (error) {
-                request.log.error(error, 'Failed to batchBurn tokens on ERC721Items contract');
+                logError(request, error, {
+                    params: request.params,
+                    body: request.body
+                });
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error during batchBurn';
                 return reply.code(500).send({
                     result: {

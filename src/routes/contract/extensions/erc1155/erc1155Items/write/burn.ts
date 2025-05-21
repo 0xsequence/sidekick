@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { erc1155ItemsAbi } from "../../../../../../constants/abis/erc1155Items";
+import { logRequest, logStep } from "../../../../../../utils/loggingUtils";
 
 type ERC1155ItemsBurnRequestBody = {
     tokenId: string;
@@ -64,6 +65,19 @@ const ERC1155ItemsBurnSchema = {
                 },
             },
         },
+        500: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        txHash: { type: 'string' },
+                        txUrl: { type: 'string' },
+                        error: { type: 'string', nullable: true },
+                    },
+                },
+            },
+        },
     },
 };
 
@@ -79,10 +93,14 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             try {
+                logRequest(request);
+
                 const { tokenId, amount } = request.body;
                 const { chainId, contractAddress } = request.params;
 
                 const signer = await getSigner(chainId);
+                logStep(request, 'Tx signer received', { signer: signer.account.address });
+                
                 const contract = new ethers.Contract(
                     contractAddress,
                     erc1155ItemsAbi,
@@ -98,7 +116,7 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
                     to: contractAddress,
                     data: callData
                 };
-
+                logStep(request, 'Tx prepared', { tx });
                 const txService = new TransactionService(fastify);
 
                 // Create pending transaction first
@@ -107,12 +125,17 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
                     contractAddress,
                     data: { functionName: 'burn', args: [tokenId, amount] }
                 });
+                logStep(request, 'Added pending transaction in db');
 
+                logStep(request, 'Sending burn transaction...');
                 const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+                logStep(request, 'Burn transaction sent', { txResponse });
 
                 // Update transaction status
                 await txService.updateTransactionStatus(pendingTx.id, txResponse);
+                logStep(request, 'Transaction status updated in db', { txResponse });
 
+                logStep(request, 'Burn transaction success', { txHash: txResponse.hash });
                 return reply.code(200).send({
                     result: {
                         txHash: txResponse.hash,

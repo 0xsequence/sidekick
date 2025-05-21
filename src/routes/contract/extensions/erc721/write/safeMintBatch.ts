@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc721Abi } from "../../../../../constants/abis/erc721";
 import { TransactionService } from "../../../../../services/transaction.service";
+import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
 
 type ERC721SafeMintBatchRequestBody = {
     recipients: string[];
@@ -74,16 +75,20 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
     }>('/write/erc721/:chainId/:contractAddress/safeMintBatch', {
         schema: ERC721SafeMintBatchSchema
     }, async (request, reply) => {
+        logRequest(request);
         try {
             const { recipients, tokenIds } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
+            logStep(request, 'Tx signer received', { signer: signer.account.address });
+
             const contract = new ethers.Contract(
                 contractAddress,
                 erc721Abi,
                 signer
             );
+            logStep(request, 'Contract instance created');
 
             const txs = recipients.map((recipient, index) => {
                 const data = contract.interface.encodeFunctionData(
@@ -94,18 +99,22 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
                     to: contractAddress,
                     data
                 }
-            })
+            });
+            logStep(request, 'Function data encoded for batch', { count: txs.length });
 
             const txService = new TransactionService(fastify);
 
-            // Create pending transaction first
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "safeMintBatch", args: [] } });
+            logStep(request, 'Adding pending transaction in db', { pendingTx });
 
+            logStep(request, 'Sending batch transaction...');
             const txResponse: TransactionResponse = await signer.sendTransaction(txs);
+            logStep(request, 'Batch transaction sent', { txResponse });
 
-            // Update transaction status
             await txService.updateTransactionStatus(pendingTx.id, txResponse);
+            logStep(request, 'Transaction status updated in db', { txResponse });
 
+            logStep(request, 'Batch transaction success', { txResponse });
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
@@ -114,7 +123,10 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
             });
 
         } catch (error) {
-            request.log.error(error);
+            logError(request, error, {
+                params: request.params,
+                body: request.body
+            });
             return reply.code(500).send({
                 result: {
                     txHash: null,

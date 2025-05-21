@@ -37,7 +37,7 @@ import { deployContract } from './contract/deploy/contract';
 import { ChainId } from '@0xsequence/network';
 import { erc721Burn } from './contract/extensions/erc721/write/burn';
 import { erc721ItemsMint } from './contract/extensions/erc721/erc721Items/write/mint';
-import { erc721ItemsDeploy } from './contract/deploy/erc721Items';
+import { erc721ItemsDeployAndInitialize } from './contract/deploy/erc721Items';
 import { deployUpgradeableContract } from './contract/deploy/upgradeableContract';
 import { erc721ItemsBurn } from './contract/extensions/erc721/erc721Items/write/burn';
 import { erc721ItemsBatchBurn } from './contract/extensions/erc721/erc721Items/write/batchBurn';
@@ -47,7 +47,6 @@ import { erc1155ItemsBurn } from './contract/extensions/erc1155/erc1155Items/wri
 import { erc1155ItemsInitialize } from './contract/extensions/erc1155/erc1155Items/write/initialize';
 import { erc1155ItemsBatchBurn } from './contract/extensions/erc1155/erc1155Items/write/batchBurn';
 import { erc1155ItemsDeploy } from './contract/deploy/erc1155Items';
-import testErrorRoute from './test-error';
 import metrics from '../plugins/metrics/metrics';
 
 export default async function (fastify: FastifyInstance) {
@@ -127,7 +126,7 @@ export default async function (fastify: FastifyInstance) {
 
     // Register deploy routes
     erc721Deploy(fastify);
-    erc721ItemsDeploy(fastify);
+    erc721ItemsDeployAndInitialize(fastify);
     erc20Deploy(fastify);
     erc1155Deploy(fastify);
     erc1155ItemsDeploy(fastify);
@@ -155,7 +154,4 @@ export default async function (fastify: FastifyInstance) {
     stopRewards(fastify);
     getJobs(fastify);
     cleanJobs(fastify);
-
-    // Test error route for Prometheus alert testing
-    await testErrorRoute(fastify);
 }

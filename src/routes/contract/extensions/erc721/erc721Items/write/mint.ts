@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { erc721ItemsAbi } from "../../../../../../constants/abis/erc721Items";
+import { logRequest, logStep, logError } from '../../../../../../utils/loggingUtils';
 
 type ERC721ItemsMintRequestBody = {
   to: string;
@@ -75,21 +76,30 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
     '/write/erc721Items/:chainId/:contractAddress/mint',
     { schema: ERC721ItemsMintSchema },
     async (request, reply) => {
+      logRequest(request);
       try {
         const { to, amount } = request.body;
         const { chainId, contractAddress } = request.params;
 
         const signer = await getSigner(chainId);
+        if (!signer || !signer.account?.address) {
+          logError(request, new Error('Signer not configured correctly.'), { signer });
+          throw new Error('Signer not configured correctly.');
+        }
+        logStep(request, 'Tx signer received', { signer: signer.account.address });
+
         const contract = new ethers.Contract(
           contractAddress,
           erc721ItemsAbi,
           signer
         );
+        logStep(request, 'Contract instance created');
 
         const data = contract.interface.encodeFunctionData(
           'mint',
           [to, amount]
         );
+        logStep(request, 'Function data encoded', { to, amount });
 
         const tx = {
           to: contractAddress,
@@ -98,18 +108,21 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 
         const txService = new TransactionService(fastify);
 
-        // Create pending transaction first
         const pendingTx = await txService.createPendingTransaction({
           chainId,
           contractAddress,
           data: { functionName: 'mint', args: [to, amount] }
         });
+        logStep(request, 'Adding pending transaction in db', { pendingTx });
 
+        logStep(request, 'Sending mint transaction...');
         const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+        logStep(request, 'Mint transaction sent', { txResponse });
 
-        // Update transaction status
         await txService.updateTransactionStatus(pendingTx.id, txResponse);
+        logStep(request, 'Transaction status updated in db', { txResponse });
 
+        logStep(request, 'Mint transaction success', { txHash: txResponse.hash });
         return reply.code(200).send({
           result: {
             txHash: txResponse.hash,
@@ -117,7 +130,10 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
           }
         });
       } catch (error) {
-        request.log.error(error);
+        logError(request, error, {
+          params: request.params,
+          body: request.body
+        });
         return reply.code(500).send({
           result: {
             txHash: null,

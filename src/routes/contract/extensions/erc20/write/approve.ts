@@ -1,4 +1,5 @@
 import { getBlockExplorerUrl } from "../../../../../utils/other";
+import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
 
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../../../utils/wallet";
@@ -75,21 +76,30 @@ export async function erc20Approve(fastify: FastifyInstance) {
     }>('/write/erc20/:chainId/:contractAddress/approve', {
         schema: ERC20ApproveSchema
     }, async (request, reply) => {
+        logRequest(request);
         try {
             const { spender, amount } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
+            if (!signer || !signer.account?.address) {
+                logError(request, new Error('Signer not configured correctly.'), { signer });
+                throw new Error('Signer not configured correctly.');
+            }
+            logStep(request, 'Tx signer received', { signer: signer.account.address });
+
             const contract = new ethers.Contract(
                 contractAddress,
                 erc20Abi,
                 signer
             );
+            logStep(request, 'Contract instance created', { contractAddress });
 
             const data = contract.interface.encodeFunctionData(
                 'approve',
                 [spender, amount]
             );
+            logStep(request, 'Function data encoded', { spender, amount });
 
             const tx = {
                 to: contractAddress,
@@ -101,10 +111,13 @@ export async function erc20Approve(fastify: FastifyInstance) {
             // Create pending transaction first
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "approve", args: [spender, amount] } });
 
+            logStep(request, 'Sending approve transaction...');
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+            logStep(request, 'Approve transaction sent', { txHash: txResponse.hash });
 
             // Update transaction status
             await txService.updateTransactionStatus(pendingTx.id, txResponse);
+            logStep(request, 'Transaction status updated in db', { txHash: txResponse.hash });
 
             return reply.code(200).send({
                 result: {
@@ -114,7 +127,10 @@ export async function erc20Approve(fastify: FastifyInstance) {
             });
 
         } catch (error) {
-            request.log.error(error);
+            logError(request, error, {
+                params: request.params,
+                body: request.body
+            });
             return reply.code(500).send({
                 result: {
                     txHash: null,

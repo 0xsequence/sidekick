@@ -4,6 +4,7 @@ import { encodeFunctionData, type Abi } from "viem";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { erc1155ItemsAbi } from "../../../../../../constants/abis/erc1155Items";
+import { logRequest, logStep, logError } from '../../../../../../utils/loggingUtils';
 
 type ERC1155ItemsInitializeRequestBody = {
     owner: string;
@@ -104,6 +105,7 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
             schema: ERC1155ItemsInitializeSchema,
         },
         async (request, reply) => {
+            logRequest(request);
             try {
                 const { chainId, contractAddress } = request.params;
                 const {
@@ -117,9 +119,10 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 
                 const signer = await getSigner(chainId);
                 if (!signer || !signer.account?.address) {
-                    request.log.error('Signer account or address is null or undefined.');
+                    logError(request, new Error('Signer not configured correctly.'), { signer });
                     throw new Error('Signer not configured correctly.');
                 }
+                logStep(request, 'Tx signer received', { signer: signer.account.address });
                 const txService = new TransactionService(fastify);
 
                 const initializeData = encodeFunctionData({
@@ -134,19 +137,20 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
                         BigInt(royaltyFeeNumerator),
                     ],
                 });
+                logStep(request, 'Function data encoded', { owner, tokenName, tokenBaseURI, tokenContractURI, royaltyReceiver, royaltyFeeNumerator });
 
-                request.log.info(`Sending initialize transaction to ${contractAddress} on chain ${chainId}`);
+                logStep(request, 'Sending initialize transaction...', { contractAddress, chainId });
                 const txResponse = await signer.sendTransaction({
                     to: contractAddress,
                     data: initializeData,
                 });
-                request.log.info(`Initialize transaction sent: ${txResponse.hash}`);
+                logStep(request, 'Initialize transaction sent', { txHash: txResponse.hash });
 
                 const receipt = await txResponse.wait();
-                request.log.info(`Initialize transaction mined: ${receipt?.hash}, status: ${receipt?.status}`);
+                logStep(request, 'Initialize transaction mined', { txHash: receipt?.hash, status: receipt?.status });
 
                 if (receipt?.status === 0) {
-                    request.log.error(`Initialize transaction reverted: ${receipt?.hash}`);
+                    logError(request, new Error('Initialize transaction reverted'), { txHash: receipt?.hash });
                     throw new Error('Initialize transaction reverted');
                 }
 
@@ -160,6 +164,7 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
                     args: [owner, tokenName, tokenBaseURI, tokenContractURI, royaltyReceiver, royaltyFeeNumerator],
                     isDeployTx: false,
                 });
+                logStep(request, 'Transaction saved in db', { txHash: receipt?.hash });
 
                 return reply.code(200).send({
                     result: {
@@ -168,7 +173,10 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
                     },
                 });
             } catch (error) {
-                request.log.error(error, 'Failed to initialize ERC1155Items contract');
+                logError(request, error, {
+                    params: request.params,
+                    body: request.body
+                });
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error during initialization';
                 return reply.code(500).send({
                     result: {
