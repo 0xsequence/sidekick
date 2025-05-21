@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { erc1155ItemsAbi } from "../../../../../../constants/abis/erc1155Items";
+import { logRequest, logStep } from "../../../../../../utils/loggingUtils";
 
 type ERC1155ItemsBatchBurnRequestBody = {
   tokenIds: string[];
@@ -76,10 +77,14 @@ export async function erc1155ItemsBatchBurn(fastify: FastifyInstance) {
     { schema: ERC1155ItemsBatchBurnSchema },
     async (request, reply) => {
       try {
+        logRequest(request);
+        
         const { tokenIds, amounts } = request.body;
         const { chainId, contractAddress } = request.params;
 
         const signer = await getSigner(chainId);
+        logStep(request, 'Tx signer received', { signer: signer.account.address });
+
         const contract = new ethers.Contract(
           contractAddress,
           erc1155ItemsAbi,
@@ -99,7 +104,7 @@ export async function erc1155ItemsBatchBurn(fastify: FastifyInstance) {
           to: contractAddress,
           data: callData
         };
-
+        logStep(request, 'Tx prepared', { tx });
         const txService = new TransactionService(fastify);
 
         // Create pending transaction first
@@ -108,12 +113,17 @@ export async function erc1155ItemsBatchBurn(fastify: FastifyInstance) {
           contractAddress,
           data: { functionName: 'batchBurn', args: [JSON.stringify(tokenIds), JSON.stringify(amounts)] }
         });
+        logStep(request, 'Added pending transaction in db');
 
+        logStep(request, 'Sending batchBurn transaction...');
         const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+        logStep(request, 'BatchBurn transaction sent', { txResponse });
 
         // Update transaction status
         await txService.updateTransactionStatus(pendingTx.id, txResponse);
+        logStep(request, 'Transaction status updated in db', { txResponse });
 
+        logStep(request, 'Batch burn transaction success', { txHash: txResponse.hash });
         return reply.code(200).send({
           result: {
             txHash: txResponse.hash,

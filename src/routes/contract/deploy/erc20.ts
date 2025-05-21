@@ -4,7 +4,9 @@ import { encodeDeployData } from "viem";
 import { erc20Abi } from "../../../constants/abis/erc20";
 import { erc20bytecode } from "../../../constants/bytecodes/erc20";
 import { TransactionService } from "../../../services/transaction.service";
-import { getBlockExplorerUrl } from "../../../utils/other";
+import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
+import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
+import { ethers } from "ethers";
 
 type ERC20DeployRequestBody = {
     initialOwner: string;
@@ -20,6 +22,7 @@ type ERC20DeployResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        deployedContractAddress: string | null;
         error?: string;
     };
 }
@@ -59,6 +62,7 @@ const ERC20DeploySchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        deployedContractAddress: { type: 'string' },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -67,9 +71,9 @@ const ERC20DeploySchema = {
         500: {
             type: 'object',
             properties: {
-                    result: {
-                        type: 'object',
-                        properties: {
+                result: {
+                    type: 'object',
+                    properties: {
                         error: { type: 'string' }
                     }
                 }
@@ -87,50 +91,81 @@ export async function erc20Deploy(fastify: FastifyInstance) {
         schema: ERC20DeploySchema
     }, async (request, reply) => {
         try {
+            logRequest(request);
+
             const { chainId } = request.params;
             const { initialOwner, name, symbol } = request.body;
 
+            logStep(request, 'Getting tx signer', { chainId });
             const signer = await getSigner(chainId);
-            const txService = new TransactionService(fastify);
+            logStep(request, 'Tx signer received', { signer: signer.account.address });
 
+            logStep(request, 'Preparing deploy data', {
+                abi: erc20Abi,
+                bytecode: erc20bytecode,
+                args: [initialOwner, name, symbol]
+            });
             const data = encodeDeployData({
                 abi: erc20Abi,
                 bytecode: erc20bytecode as `0x${string}`,
                 args: [initialOwner, name, symbol]
-            })
+            });
+            logStep(request, 'Deploy data prepared', { data });
 
+            logStep(request, 'Sending deploy transaction', { data });
             const tx = await signer.sendTransaction({
                 data
-            })
+            });
+            logStep(request, 'Deploy transaction sent', { tx });
 
+            logStep(request, 'Waiting for deploy receipt', { txHash: tx.hash });
             const receipt = await tx.wait();
+            logStep(request, 'Deploy receipt received', { receipt });
+
+            const deployedContractAddress = getContractAddressFromEvent(receipt, 'CreatedContract(address)');
 
             if(receipt?.status === 0) {
+                logError(request, new Error('Transaction reverted'), { receipt });
                 throw new Error('Transaction reverted');
             }
 
-            await txService.createTransaction({
+            logStep(request, 'Creating transaction record in db', {
                 chainId,
-                contractAddress: receipt?.contractAddress ?? '',
+                contractAddress: deployedContractAddress,
                 abi: erc20Abi,
                 data,
                 txHash: receipt?.hash ?? '',
                 isDeployTx: true    
-            })
+            });
+            const txService = new TransactionService(fastify);
+            await txService.createTransaction({
+                chainId,
+                contractAddress: deployedContractAddress,
+                abi: erc20Abi,
+                data,
+                txHash: receipt?.hash ?? '',
+                isDeployTx: true    
+            });
 
+            logStep(request, 'Deploy transaction success', { txHash: receipt?.hash });
             return reply.code(200).send({
                 result: {
                     txHash: receipt?.hash ?? null,
-                    txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? '')
+                    txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+                    deployedContractAddress: deployedContractAddress
                 }
             });
 
         } catch (error) {
-            request.log.error(error);
+            logError(request, error, {
+                params: request.params,
+                body: request.body
+            });
             return reply.code(500).send({
                 result: {
                     txHash: null,
                     txUrl: null,
+                    deployedContractAddress: null,
                     error: error instanceof Error ? error.message : 'Failed to deploy ERC20'
                 }
             });

@@ -7,8 +7,11 @@ import cors from '@fastify/cors'
 import bull from './plugins/bull/bull';
 import bullBoard from './plugins/bull-board/bull-board';
 
+const isDebug = process.env.DEBUG === 'true';
+
 const fastify = Fastify({
     logger: {
+        level: isDebug ? 'debug' : 'info',
         transport: {
             target: 'pino-pretty',
             options: {

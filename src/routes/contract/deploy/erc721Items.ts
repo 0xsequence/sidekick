@@ -2,13 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
 import { encodeDeployData, encodeFunctionData, type Abi } from "viem";
 import { TransactionService } from "../../../services/transaction.service";
-import { getBlockExplorerUrl } from "../../../utils/other";
+import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
 import { erc721ItemsBytecode } from "../../../constants/bytecodes/erc721Items";
 import { erc721ItemsAbi } from "../../../constants/abis/erc721Items";
 import { ethers, type TransactionReceipt, type TransactionResponse } from "ethers";
+import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
 
 
-type ERC721ItemsDeployRequestBody = {
+type ERC721ItemsDeployAndInitializeRequestBody = {
     owner: string;
     tokenName: string;
     tokenSymbol: string;
@@ -18,24 +19,24 @@ type ERC721ItemsDeployRequestBody = {
     royaltyFeeNumerator: string; 
 };
 
-type ERC721ItemsDeployRequestParams = {
+type ERC721ItemsDeployAndInitializeRequestParams = {
     chainId: string;
 };
 
-type ERC721ItemsDeployResponse = {
+type ERC721ItemsDeployAndInitializeResponse = {
     result?: {
         deploymentTxHash?: string | null;
         deploymentTxUrl?: string | null;
         initializationTxHash: string | null;
         initializationTxUrl: string | null;
-        contractAddress: string | null;
+        deployedContractAddress: string | null;
         error?: string;
     };
 };
 
-const ERC721ItemsDeploySchema = {
-    tags: ['ERC721Items', 'Deploy'],
-    description: 'Deploy an Upgradable ERC721Items contract and call its initialize function.',
+const ERC721ItemsDeployAndInitializeSchema = {
+    tags: ['ERC721Items', 'Deploy', 'Initialize', 'Upgradeable'],
+    description: 'Deploy and initialize an ERC721Items contract.',
     body: {
         type: 'object',
         required: [
@@ -82,7 +83,7 @@ const ERC721ItemsDeploySchema = {
                         deploymentTxUrl: { type: 'string', nullable: true },
                         initializationTxHash: { type: 'string' },
                         initializationTxUrl: { type: 'string' },
-                        contractAddress: { type: 'string' },
+                        deployedContractAddress: { type: 'string' },
                         error: { type: 'string', nullable: true },
                     },
                 },
@@ -91,18 +92,19 @@ const ERC721ItemsDeploySchema = {
     },
 };
 
-export async function erc721ItemsDeploy(fastify: FastifyInstance) {
+export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
     fastify.post<{
-        Params: ERC721ItemsDeployRequestParams;
-        Body: ERC721ItemsDeployRequestBody;
-        Reply: ERC721ItemsDeployResponse;
+        Params: ERC721ItemsDeployAndInitializeRequestParams;
+        Body: ERC721ItemsDeployAndInitializeRequestBody;
+        Reply: ERC721ItemsDeployAndInitializeResponse;
     }>(
-        '/deploy/erc721Items/:chainId',
+        '/deployAndInitialize/erc721Items/:chainId',
         {
-            schema: ERC721ItemsDeploySchema,
+            schema: ERC721ItemsDeployAndInitializeSchema,
         },
         async (request, reply) => {
             try {
+                logRequest(request);
                 const { chainId } = request.params;
                 const {
                     owner,
@@ -114,42 +116,47 @@ export async function erc721ItemsDeploy(fastify: FastifyInstance) {
                     royaltyFeeNumerator,
                 } = request.body;
 
+                logStep(request, 'Getting tx signer', { chainId });
                 const signer = await getSigner(chainId);
+                logStep(request, 'Tx signer received', { signer: signer.account.address });
                 const txService = new TransactionService(fastify);
 
                 // Step 1: Deploy the contract
+                logStep(request, 'Preparing deploy data', {
+                    abi: erc721ItemsAbi,
+                    bytecode: erc721ItemsBytecode,
+                    args: []
+                });
                 const deployData = encodeDeployData({
                     abi: erc721ItemsAbi,
                     bytecode: erc721ItemsBytecode as `0x${string}`,
                     args: [],
                 });
+                logStep(request, 'Deploy data prepared', { deployData });
 
-                request.log.info(`ERC721Items sending deployment transaction`);
+                logStep(request, 'Sending deployment transaction', { deployData });
                 const deployTx: TransactionResponse = await signer.sendTransaction({
                     data: deployData
                 });
+                logStep(request, 'Deployment transaction sent', { deployTx });
 
+                logStep(request, 'Waiting for deployment receipt', { txHash: deployTx.hash });
                 const deployReceipt: TransactionReceipt | null = await deployTx.wait();
+                logStep(request, 'Deployment receipt received');
 
-                const contractCreatedEvent = deployReceipt?.logs.find(log =>
-                    log.topics.includes(ethers.id('CreatedContract(address)'))
-                )
-
-                const deployedContractAddress = ethers.getAddress(
-                    ethers.zeroPadValue(ethers.stripZerosLeft(contractCreatedEvent?.data ?? ''), 20)
-                )
-
+                const deployedContractAddress = getContractAddressFromEvent(deployReceipt, 'CreatedContract(address)');
+                logStep(request, 'Deployed contract address extracted', { deployedContractAddress });
+                
                 if (deployReceipt?.status === 0) {
-                    request.log.error(`ERC721Items deployment transaction reverted: ${deployReceipt?.hash}`);
+                    logError(request, new Error('Contract deployment transaction reverted'), { deployReceipt });
                     throw new Error('Contract deployment transaction reverted');
                 }
 
                 if (!deployedContractAddress) {
-                    request.log.error('Contract address not found after deployment');
+                    logError(request, new Error('Contract address not found after deployment'), { deployReceipt });
                     throw new Error('Contract address not found after deployment');
                 }
-                request.log.info(`ERC721Items contract deployed at: ${deployedContractAddress}`);
-
+                logStep(request, 'Contract deployed', { deployedContractAddress });
 
                 await txService.createTransaction({
                     chainId,
@@ -161,6 +168,10 @@ export async function erc721ItemsDeploy(fastify: FastifyInstance) {
                 });
 
                 // Step 2: Initialize the contract
+                logStep(request, 'Preparing initialize data', {
+                    functionName: 'initialize',
+                    args: [owner, tokenName, tokenSymbol, tokenBaseURI, tokenContractURI, royaltyReceiver, royaltyFeeNumerator]
+                });
                 const initializeData = encodeFunctionData({
                     abi: erc721ItemsAbi,
                     functionName: 'initialize',
@@ -171,32 +182,40 @@ export async function erc721ItemsDeploy(fastify: FastifyInstance) {
                         tokenBaseURI,
                         tokenContractURI,
                         royaltyReceiver,
-                        BigInt(royaltyFeeNumerator), // Convert string to BigInt for uint96
+                        BigInt(royaltyFeeNumerator),
                     ],
                 });
+                logStep(request, 'Initialize data prepared', { initializeData });
 
+                logStep(request, 'Sending initialization transaction', { to: deployedContractAddress, initializeData });
                 const initializeTx = await signer.sendTransaction({
                     to: deployedContractAddress,
                     data: initializeData,
                 });
-                
-                request.log.info(`ERC721Items initialization transaction sent: ${initializeTx.hash} to contract: ${deployedContractAddress}`);
-                const initializeReceipt = await initializeTx.wait();
-                request.log.info(`ERC721Items initialization transaction mined: ${initializeReceipt?.hash}`);
+                logStep(request, 'Initialization transaction sent');
 
+                logStep(request, 'Waiting for initialization receipt', { txHash: initializeTx.hash });
+                const initializeReceipt = await initializeTx.wait();
+                logStep(request, 'Initialization receipt received', { initializeReceipt });
 
                 if (initializeReceipt?.status === 0) {
-                     request.log.error(`ERC721Items initialization transaction reverted: ${initializeReceipt?.hash}`);
+                    logError(request, new Error('Contract initialization transaction reverted'), { initializeReceipt });
                     throw new Error('Contract initialization transaction reverted');
                 }
 
+                logStep(request, 'Creating transaction record in db');
                 await txService.createTransaction({
                     chainId,
                     contractAddress: deployedContractAddress,
                     abi: erc721ItemsAbi,
                     data: initializeData,
-                    txHash: initializeReceipt?.hash ?? '',
                     isDeployTx: false, 
+                });
+
+                logStep(request, 'Deploy and initialize success', {
+                    deploymentTxHash: deployReceipt?.hash ?? null,
+                    initializationTxHash: initializeReceipt?.hash ?? null,
+                    contractAddress: deployedContractAddress
                 });
 
                 return reply.code(200).send({
@@ -205,18 +224,21 @@ export async function erc721ItemsDeploy(fastify: FastifyInstance) {
                         deploymentTxUrl: getBlockExplorerUrl(Number(chainId), deployReceipt?.hash ?? ''),
                         initializationTxHash: initializeReceipt?.hash ?? null,
                         initializationTxUrl: getBlockExplorerUrl(Number(chainId), initializeReceipt?.hash ?? ''),
-                        contractAddress: deployedContractAddress,
+                        deployedContractAddress: deployedContractAddress,
                     },
                 });
             } catch (error) {
-                request.log.error(error, 'Failed to deploy and initialize ERC721Items contract');
+                logError(request, error, {
+                    params: request.params,
+                    body: request.body
+                });
                 return reply.code(500).send({
                     result: {
                         deploymentTxHash: null,
                         deploymentTxUrl: null,
                         initializationTxHash: null,
                         initializationTxUrl: null,
-                        contractAddress: null,
+                        deployedContractAddress: null,
                         error: error instanceof Error ? error.message : 'Failed to deploy and initialize ERC721Items contract',
                     },
                 });

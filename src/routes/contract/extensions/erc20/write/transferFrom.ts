@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc20Abi } from "abitype/abis";
 import { TransactionService } from "../../../../../services/transaction.service";
+import { logRequest, logStep } from "../../../../../utils/loggingUtils";
 
 type ERC20TransferFromRequestBody = {
     from: string;
@@ -77,10 +78,14 @@ export async function erc20TransferFrom(fastify: FastifyInstance) {
         schema: ERC20TransferFromSchema
     }, async (request, reply) => {
         try {
+            logRequest(request);
+
             const { from, to, amount } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
+            logStep(request, 'Tx signer received', { signer: signer.account.address });
+
             const contract = new ethers.Contract(
                 contractAddress,
                 erc20Abi,
@@ -96,17 +101,23 @@ export async function erc20TransferFrom(fastify: FastifyInstance) {
                 to: contractAddress,
                 data
             }
+            logStep(request, 'Tx prepared', { tx });
 
             const txService = new TransactionService(fastify);
 
             // Create pending transaction first
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "transferFrom", args: [from, to, amount] } });
+            logStep(request, 'Pending transaction created', { pendingTx });
 
+            logStep(request, 'Sending transferFrom transaction...');
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+            logStep(request, 'TransferFrom transaction sent', { txHash: txResponse.hash });
 
             // Update transaction status
             await txService.updateTransactionStatus(pendingTx.id, txResponse);
+            logStep(request, 'Transaction status updated in db', { txHash: txResponse.hash });
 
+            logStep(request, 'TransferFrom transaction success', { txHash: txResponse.hash });
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,

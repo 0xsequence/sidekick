@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { TransactionService } from "../../../../../services/transaction.service";
 import { erc1155Abi } from "../../../../../constants/abis/erc1155";
+import { logRequest, logStep } from "../../../../../utils/loggingUtils";
 
 type ERC1155MintBatchRequestBody = {
     recipients: string[];
@@ -66,6 +67,19 @@ const ERC1155MintBatchSchema = {
                     }
                 }
             }
+        },
+        500: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        txHash: { type: 'string', nullable: true },
+                        txUrl: { type: 'string', nullable: true },
+                        error: { type: 'string' }
+                    }
+                }
+            }
         }
     }
 }
@@ -79,10 +93,14 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
         schema: ERC1155MintBatchSchema
     }, async (request, reply) => {
         try {
+            logRequest(request);
+
             const { recipients, ids, amounts, datas } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
+            logStep(request, 'Tx signer received', { signer: signer.account.address });
+
             const contract = new ethers.Contract(
                 contractAddress,
                 erc1155Abi,
@@ -99,17 +117,23 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
                     data
                 }
             })
+            logStep(request, 'Transactions prepared', { txs });
 
             const txService = new TransactionService(fastify);
 
             // Create pending transaction first
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint (batch)", args: [] } });
+            logStep(request, 'Added pending transaction in db');
 
+            logStep(request, 'Sending transactions...');
             const txResponse: TransactionResponse = await signer.sendTransaction(txs);
+            logStep(request, 'Transactions sent', { txResponse });
 
             // Update transaction status
             await txService.updateTransactionStatus(pendingTx.id, txResponse);
+            logStep(request, 'Transaction status updated in db');
 
+            logStep(request, 'Mint batch transaction success', { txHash: txResponse.hash });
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,

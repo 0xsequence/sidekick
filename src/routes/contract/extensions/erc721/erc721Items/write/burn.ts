@@ -4,6 +4,7 @@ import { encodeFunctionData, type Abi } from "viem";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { erc721ItemsAbi } from "../../../../../../constants/abis/erc721Items";
+import { logRequest, logStep, logError } from '../../../../../../utils/loggingUtils';
 
 type ERC721ItemsBurnRequestBody = {
     tokenId: string;
@@ -75,15 +76,17 @@ export async function erc721ItemsBurn(fastify: FastifyInstance) {
             schema: ERC721ItemsBurnSchema,
         },
         async (request, reply) => {
+            logRequest(request);
             try {
                 const { chainId, contractAddress } = request.params;
                 const { tokenId } = request.body;
 
                 const signer = await getSigner(chainId);
                 if (!signer || !signer.account?.address) {
-                    request.log.error('Signer account or address is null or undefined.');
+                    logError(request, new Error('Signer not configured correctly.'), { signer });
                     throw new Error('Signer not configured correctly.');
                 }
+                logStep(request, 'Tx signer received', { signer: signer.account.address });
                 const txService = new TransactionService(fastify);
 
                 const burnData = encodeFunctionData({
@@ -91,19 +94,20 @@ export async function erc721ItemsBurn(fastify: FastifyInstance) {
                     functionName: 'burn',
                     args: [BigInt(tokenId)],
                 });
+                logStep(request, 'Function data encoded', { tokenId });
 
-                request.log.info(`Sending burn transaction for token ${tokenId} to ${contractAddress} on chain ${chainId}`);
+                logStep(request, 'Sending burn transaction...');
                 const txResponse = await signer.sendTransaction({
                     to: contractAddress,
                     data: burnData,
                 });
-                request.log.info(`Burn transaction sent: ${txResponse.hash}`);
+                logStep(request, 'Burn transaction sent', { txResponse });
 
                 const receipt = await txResponse.wait();
-                request.log.info(`Burn transaction mined: ${receipt?.hash}, status: ${receipt?.status}`);
+                logStep(request, 'Burn transaction mined', { receipt });
 
                 if (receipt?.status === 0) {
-                    request.log.error(`Burn transaction reverted: ${receipt?.hash}`);
+                    logError(request, new Error('Burn transaction reverted'), { receipt });
                     throw new Error('Burn transaction reverted');
                 }
 
@@ -117,7 +121,9 @@ export async function erc721ItemsBurn(fastify: FastifyInstance) {
                     args: [tokenId],
                     isDeployTx: false,
                 });
+                logStep(request, 'Transaction record created in db');
 
+                logStep(request, 'Burn transaction success', { txHash: receipt?.hash });
                 return reply.code(200).send({
                     result: {
                         txHash: receipt?.hash ?? null,
@@ -125,7 +131,10 @@ export async function erc721ItemsBurn(fastify: FastifyInstance) {
                     },
                 });
             } catch (error) {
-                request.log.error(error, 'Failed to burn token on ERC721Items contract');
+                logError(request, error, {
+                    params: request.params,
+                    body: request.body
+                });
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error during burn';
                 return reply.code(500).send({
                     result: {

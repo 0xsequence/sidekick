@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { TransactionService } from "../../../../../services/transaction.service";
 import { erc1155Abi } from "../../../../../constants/abis/erc1155";
+import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
 
 type ERC1155GrantRoleRequestBody = {
     role: string;
@@ -62,6 +63,19 @@ const ERC1155GrantRoleSchema = {
                     }
                 }
             }
+        },
+        500: {
+            type: 'object',
+            properties: {
+                result: {
+                    type: 'object',
+                    properties: {
+                        txHash: { type: 'string', nullable: true },
+                        txUrl: { type: 'string', nullable: true },
+                        error: { type: 'string' }
+                    }
+                }
+            }
         }
     }
 }
@@ -74,21 +88,30 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
     }>('/write/erc1155/:chainId/:contractAddress/grantRole', {
         schema: ERC1155GrantRoleSchema
     }, async (request, reply) => {
+        logRequest(request);
         try {
             const { role, account } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
+            if (!signer || !signer.account?.address) {
+                logError(request, new Error('Signer not configured correctly.'), { signer });
+                throw new Error('Signer not configured correctly.');
+            }
+            logStep(request, 'Tx signer received', { signer: signer.account.address });
+
             const contract = new ethers.Contract(
                 contractAddress,
                 erc1155Abi,
                 signer
             );
+            logStep(request, 'Contract instance created');
 
             const data = contract.interface.encodeFunctionData(
                 'grantRole',
                 [role, account]
             );
+            logStep(request, 'Function data encoded', { role, account });
 
             const tx = {
                 to: contractAddress,
@@ -99,12 +122,17 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
 
             // Create pending transaction first
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "grantRole", args: [role, account] } });
+            logStep(request, 'Added pending transaction in db');
 
+            logStep(request, 'Sending grantRole transaction...');
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+            logStep(request, 'grantRole transaction sent', { txResponse });
 
             // Update transaction status
             await txService.updateTransactionStatus(pendingTx.id, txResponse);
+            logStep(request, 'Transaction status updated in db', { txResponse });
 
+            logStep(request, 'Grant role transaction success', { txHash: txResponse.hash });
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
@@ -113,7 +141,10 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
             });
 
         } catch (error) {
-            request.log.error(error);
+            logError(request, error, {
+                params: request.params,
+                body: request.body
+            });
             return reply.code(500).send({
                 result: {
                     txHash: null,

@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc20Abi } from "abitype/abis";
 import { TransactionService } from "../../../../../services/transaction.service";
+import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
 
 type ERC20TransferRequestBody = {
     to: string;
@@ -74,21 +75,30 @@ export async function erc20Transfer(fastify: FastifyInstance) {
     }>('/write/erc20/:chainId/:contractAddress/transfer', {
         schema: ERC20TransferSchema
     }, async (request, reply) => {
+        logRequest(request);
         try {
             const { to, amount } = request.body;
             const { chainId, contractAddress } = request.params;
 
             const signer = await getSigner(chainId);
+            if (!signer || !signer.account?.address) {
+                logError(request, new Error('Signer not configured correctly.'), { signer });
+                throw new Error('Signer not configured correctly.');
+            }
+            logStep(request, 'Tx signer received', { signer: signer.account.address });
+
             const contract = new ethers.Contract(
                 contractAddress,
                 erc20Abi,
                 signer
             );
+            logStep(request, 'Contract instance created', { contractAddress });
 
             const data = contract.interface.encodeFunctionData(
                 'transfer',
                 [to, amount]
             );
+            logStep(request, 'Function data encoded', { to, amount });
 
             const tx = {
                 to: contractAddress,
@@ -99,11 +109,15 @@ export async function erc20Transfer(fastify: FastifyInstance) {
 
             // Create pending transaction first
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "transfer", args: [to, amount] } });
+            logStep(request, 'Pending transaction created', { pendingTx });
 
+            logStep(request, 'Sending transfer transaction...');
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
+            logStep(request, 'Transfer transaction sent', { txHash: txResponse.hash });
 
             // Update transaction status
             await txService.updateTransactionStatus(pendingTx.id, txResponse);
+            logStep(request, 'Transaction status updated in db', { txHash: txResponse.hash });
 
             return reply.code(200).send({
                 result: {
@@ -113,7 +127,10 @@ export async function erc20Transfer(fastify: FastifyInstance) {
             });
 
         } catch (error) {
-            request.log.error(error);
+            logError(request, error, {
+                params: request.params,
+                body: request.body
+            });
             return reply.code(500).send({
                 result: {
                     txHash: null,
