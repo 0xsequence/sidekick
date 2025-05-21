@@ -9,3 +9,11 @@ providers:
     editable: true
     options:
       path: /etc/grafana/provisioning/dashboards
+  - name: 'API Usage'
+    orgId: 1
+    folder: 'api-usage'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/api-usage

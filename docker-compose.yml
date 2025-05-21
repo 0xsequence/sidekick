@@ -16,6 +16,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "2"
+          memory: 2G
 
   redis:
     container_name: sidekick_redis
@@ -26,8 +34,16 @@ services:
       - "6380"
     volumes:
       - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
     
   sequence_sidekick:
+    profiles:
+      - api
+      - dev  # Optional development profile
     build: .
     container_name: server
     restart: always
@@ -65,10 +81,16 @@ services:
       - NODE_ENV=development
       # Local Signer configs
       - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
-      
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
     command: ["/bin/sh", "-c", "npx prisma migrate reset --force && pnpm prisma migrate dev --name init && npx prisma migrate deploy && pnpm start"]
 
   prometheus:
+    profiles:
+      - monitoring
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
@@ -79,6 +101,8 @@ services:
     restart: always
 
   alertmanager:
+    profiles:
+      - monitoring
     image: prom/alertmanager:latest
     container_name: alertmanager
     ports:
@@ -88,6 +112,8 @@ services:
     restart: always
 
   grafana:
+    profiles:
+      - monitoring
     image: grafana/grafana:latest
     container_name: grafana
     ports:
