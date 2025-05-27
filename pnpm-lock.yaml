@@ -14,6 +14,9 @@ importers:
       '@0xsequence/aws-kms-signer':
         specifier: ^0.1.1
         version: 0.1.1(typescript@5.7.3)
+      '@0xsequence/core':
+        specifier: ^2.3.16
+        version: 2.3.16(ethers@6.13.5)
       '@0xsequence/google-kms-signer':
         specifier: ^0.2.0
         version: 0.2.0(ethers@6.13.5)
@@ -126,6 +129,9 @@ packages:
   '@0xsequence/abi@2.2.14':
     resolution: {integrity: sha512-ujnpjF338Ba976nyhBNWJjqn5DxIsW0IZnmDOTYs80BK2oxQirwaMC9dh0HrOUA6jWomMV1vPypGfZmGopzO0g==}
 
+  '@0xsequence/abi@2.3.16':
+    resolution: {integrity: sha512-Wbz1Lm6OYRvSU2IuL+Q9R9y5qHOjPUrb0lgaAnpRNitJDln3VgvX4DrnV7WWdjNC9iI7pLF9LIwfmYQvbAr4eQ==}
+
   '@0xsequence/account@2.2.11':
     resolution: {integrity: sha512-8q9kQeQkzvMGREnKnFXAPt4ILpJp3nVglbU6mjpoVfPCXeLIUVdcRPs87Yoo+EgMSxsjQEuWzdY3kNJRhz33ow==}
     peerDependencies:
@@ -164,6 +170,11 @@ packages:
 
   '@0xsequence/core@2.2.14':
     resolution: {integrity: sha512-STAmr3BiCwuKhielLWsEDmy0Pk29CIL0lkkRQRAtnX1xvo4lFO0So66/TaqJf1vLX4CKzxS003dZIMMgn10dtA==}
+    peerDependencies:
+      ethers: '>=6'
+
+  '@0xsequence/core@2.3.16':
+    resolution: {integrity: sha512-G7qwjBwm9BFPkjb+1HABGA7XCv79KuXNy0+wNZRXqz9sSzTtri8fnQHYRlHUO+2ESARd1KXwoYUOcjIpmKeY3A==}
     peerDependencies:
       ethers: '>=6'
 
@@ -264,6 +275,11 @@ packages:
 
   '@0xsequence/utils@2.2.14':
     resolution: {integrity: sha512-ZcxIWbxEtTSyVlISMOV0XeOG3d4gQ7DB27qAQSTFe6yca9jeGsPDmi94mIYcxpxZfoTTAa3aS6UpvaW3vNJXkQ==}
+    peerDependencies:
+      ethers: '>=6'
+
+  '@0xsequence/utils@2.3.16':
+    resolution: {integrity: sha512-dPi/6/m2m+gEbdGRREhhQkPTT/qSvcmaHVAcIZ8YH6QCXB4iTi5U8oIOgSkYqTdd07QtPg420yNVKqAfNnUVAg==}
     peerDependencies:
       ethers: '>=6'
 
@@ -2425,6 +2441,8 @@ snapshots:
 
   '@0xsequence/abi@2.2.14': {}
 
+  '@0xsequence/abi@2.3.16': {}
+
   '@0xsequence/account@2.2.11(ethers@6.13.5)':
     dependencies:
       '@0xsequence/abi': 2.2.11
@@ -2517,6 +2535,12 @@ snapshots:
     dependencies:
       '@0xsequence/abi': 2.2.14
       '@0xsequence/utils': 2.2.14(ethers@6.13.5)
+      ethers: 6.13.5
+
+  '@0xsequence/core@2.3.16(ethers@6.13.5)':
+    dependencies:
+      '@0xsequence/abi': 2.3.16
+      '@0xsequence/utils': 2.3.16(ethers@6.13.5)
       ethers: 6.13.5
 
   '@0xsequence/ethauth@1.0.0(ethers@6.13.5)':
@@ -2654,6 +2678,11 @@ snapshots:
       js-base64: 3.7.7
 
   '@0xsequence/utils@2.2.14(ethers@6.13.5)':
+    dependencies:
+      ethers: 6.13.5
+      js-base64: 3.7.7
+
+  '@0xsequence/utils@2.3.16(ethers@6.13.5)':
     dependencies:
       ethers: 6.13.5
       js-base64: 3.7.7

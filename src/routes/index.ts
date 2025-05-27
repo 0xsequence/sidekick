@@ -48,6 +48,8 @@ import { erc1155ItemsInitialize } from './contract/extensions/erc1155/erc1155Ite
 import { erc1155ItemsBatchBurn } from './contract/extensions/erc1155/erc1155Items/write/batchBurn';
 import { erc1155ItemsDeploy } from './contract/deploy/erc1155Items';
 import metrics from '../plugins/metrics/metrics';
+import { simulateDeployment } from './contract/simulate/simulateDeployment';
+import { simulateTransaction } from './contract/simulate/simulateTransaction';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -154,4 +156,8 @@ export default async function (fastify: FastifyInstance) {
     stopRewards(fastify);
     getJobs(fastify);
     cleanJobs(fastify);
+
+    // Simulate transaction
+    simulateDeployment(fastify);
+    simulateTransaction(fastify);
 }

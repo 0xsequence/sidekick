@@ -6,6 +6,8 @@ import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc20Abi } from "../../../../../constants/abis/erc20";
 import { TransactionService } from "../../../../../services/transaction.service";
 import { logRequest, logStep } from "../../../../../utils/loggingUtils";
+import { TENDERLY_SIMULATION_URL } from "../../../../../constants/general";
+import { getTenderlySimulationUrl } from "../../../utils/tenderly/getSimulationUrl";
 
 type ERC20MintRequestBody = {
     to: string;
@@ -105,6 +107,48 @@ export async function erc20Mint(fastify: FastifyInstance) {
 
             // Create pending transaction first
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint", args: [to, amount] } });
+
+            if(process.env.DEBUG === 'true') {
+                const payload: Record<string, any> = {
+                    network_id: String(chainId), // Tenderly expects string
+                    block_number: await signer.provider.getBlockNumber(),
+                    from: signer.account.address,
+                    to: contractAddress,
+                    gas: 3000000,
+                    input: data
+                };
+
+                const simulation = await fetch(
+                    TENDERLY_SIMULATION_URL,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'X-Access-Key': process.env.TENDERLY_ACCESS_KEY as string,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+
+                const simulationResponse = await simulation.json();
+
+                const tenderlyUrl = getTenderlySimulationUrl({
+                    accountSlug: process.env.TENDERLY_ACCOUNT_SLUG as string,
+                    projectSlug: process.env.TENDERLY_PROJECT_SLUG as string,
+                    chainId: chainId,
+                    from: signer.account.address,
+                    gas: 3000000,
+                    block: await signer.provider.getBlockNumber(),
+                    blockIndex: 0,
+                    contractAddress: contractAddress,
+                    contractFunction: 'mint',
+                    rawFunctionInput: data,
+                    functionInputs: [to, amount]
+                });
+
+                console.log(simulationResponse);
+                console.log(tenderlyUrl);
+            }
 
             logStep(request, 'Sending mint transaction...');
             const txResponse: TransactionResponse = await signer.sendTransaction(tx);
