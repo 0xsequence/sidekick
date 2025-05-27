@@ -1,11 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
-import { encodeDeployData } from "viem";
+import { encodeDeployData, encodeAbiParameters } from "viem";
 import { erc721bytecode } from "../../../constants/bytecodes/erc721";
 import { erc721Abi } from "../../../constants/abis/erc721";
 import { TransactionService } from "../../../services/transaction.service";
 import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
 import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
+import { verifyContract } from "../../../utils/contractVerification";
+import { erc721JsonInputMetadata } from "../../../constants/contractJsonInputs/erc721";
 
 type ERC721DeployRequestBody = {
     defaultAdmin: string;
@@ -143,6 +145,43 @@ export async function erc721Deploy(fastify: FastifyInstance) {
             });
 
             logStep(request, 'Deploy transaction success', { txHash: receipt?.hash });
+
+            // --- Verification logic (added) ---
+            if (process.env.VERIFY_CONTRACT_ON_DEPLOY === 'true') {
+                logStep(request, 'Verifying contract', {
+                    chainId,
+                    contractAddress: deployedContractAddress,
+                    contractName: 'ERC721',
+                });
+
+                const encodedConstructorArguments = encodeAbiParameters(
+                    [
+                        { name: 'defaultAdmin', type: 'address' },
+                        { name: 'minter', type: 'address' },
+                        { name: 'name', type: 'string' },
+                        { name: 'symbol', type: 'string' }
+                    ],
+                    [defaultAdmin as `0x${string}`, minter as `0x${string}`, name, symbol]
+                );
+
+                // Remove "0x" prefix if present
+                const encodedArgsNoPrefix = encodedConstructorArguments.startsWith('0x')
+                    ? encodedConstructorArguments.slice(2)
+                    : encodedConstructorArguments;
+
+                const response = await verifyContract({
+                    chainId,
+                    contractAddress: deployedContractAddress,
+                    contractName: "contracts/ERC721.sol:NFT", 
+                    compilerVersion: 'v0.8.27+commit.40a35a09', 
+                    contractInputMetadata: erc721JsonInputMetadata,
+                    constructorArguments: encodedArgsNoPrefix
+                });
+
+                logStep(request, 'Contract verification response: ', { response });
+            }
+            // --- End verification logic ---
+
             return reply.code(200).send({
                 result: {
                     txHash: receipt?.hash ?? null,
