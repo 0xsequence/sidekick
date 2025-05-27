@@ -1,12 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
-import { encodeDeployData } from "viem";
+import { encodeAbiParameters, encodeDeployData } from "viem";
 import { erc20Abi } from "../../../constants/abis/erc20";
 import { erc20bytecode } from "../../../constants/bytecodes/erc20";
 import { TransactionService } from "../../../services/transaction.service";
 import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
 import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
-import { ethers } from "ethers";
+import { verifyContract } from "../../../utils/contractVerification";
+import { erc20JsonInputMetadata } from "../../../constants/contractJsonInputs/erc20";
 
 type ERC20DeployRequestBody = {
     initialOwner: string;
@@ -148,6 +149,40 @@ export async function erc20Deploy(fastify: FastifyInstance) {
             });
 
             logStep(request, 'Deploy transaction success', { txHash: receipt?.hash });
+
+            if (process.env.VERIFY_CONTRACT_ON_DEPLOY === 'true') {
+                logStep(request, 'Verifying contract', {
+                    chainId,
+                    contractAddress: deployedContractAddress,
+                    contractName: 'ERC20',
+                });
+
+                const encodedConstructorArguments = encodeAbiParameters(
+                    [
+                        { name: 'initialOwner', type: 'address' },
+                        { name: 'name', type: 'string' },
+                        { name: 'symbol', type: 'string' }
+                    ],
+                    [initialOwner as `0x${string}`, name, symbol]
+                );
+
+                // Remove "0x" prefix if present
+                const encodedArgsNoPrefix = encodedConstructorArguments.startsWith('0x')
+                    ? encodedConstructorArguments.slice(2)
+                    : encodedConstructorArguments;
+
+                const response = await verifyContract({
+                    chainId,
+                    contractAddress: deployedContractAddress,
+                    contractName: "contracts/ERC20.sol:Token",
+                    compilerVersion: 'v0.8.27+commit.40a35a09',
+                    contractInputMetadata: erc20JsonInputMetadata,
+                    constructorArguments: encodedArgsNoPrefix
+                });
+
+                logStep(request, 'Contract verification response: ', { response });
+            }
+            
             return reply.code(200).send({
                 result: {
                     txHash: receipt?.hash ?? null,

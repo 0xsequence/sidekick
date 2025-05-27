@@ -50,6 +50,7 @@ import { erc1155ItemsDeploy } from './contract/deploy/erc1155Items';
 import metrics from '../plugins/metrics/metrics';
 import { simulateDeployment } from './contract/simulate/simulateDeployment';
 import { simulateTransaction } from './contract/simulate/simulateTransaction';
+import { verifyContract } from './contract/utils/verify/verify';
 
 export default async function (fastify: FastifyInstance) {
     // Health check route
@@ -160,4 +161,7 @@ export default async function (fastify: FastifyInstance) {
     // Simulate transaction
     simulateDeployment(fastify);
     simulateTransaction(fastify);
+    
+    // Contract verification
+    verifyContract(fastify);
 }
