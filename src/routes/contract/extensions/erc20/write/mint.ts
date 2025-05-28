@@ -24,6 +24,7 @@ type ERC20MintResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -62,6 +63,7 @@ const ERC20MintSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -78,6 +80,8 @@ export async function erc20Mint(fastify: FastifyInstance) {
     }>('/write/erc20/:chainId/:contractAddress/mint', {
         schema: ERC20MintSchema
     }, async (request, reply) => {
+        let tenderlyUrl: string | null = null;
+
         try {
             logRequest(request);
 
@@ -110,60 +114,21 @@ export async function erc20Mint(fastify: FastifyInstance) {
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint", args: [to, amount] } });
 
             if(process.env.DEBUG === 'true') {
+                const signedTx = await signer.account.signTransactions([
+                    tx
+                ], chainId)
 
-                // call execute on the smart account
-                const simulationData = commons.transaction.encodeBundleExecData({
-                    entrypoint: signer.account.address,
-                    transactions: [
-                        {
-                            to: contractAddress,
-                            data
-                        }
-                    ]
-                })
+                const simulationData = commons.transaction.encodeBundleExecData(signedTx)
 
-                // Do I need to do this ?
-                // const sequenceTransaction = commons.transaction.toSequenceTransaction(signer.account.address, tx)
-
-                const payload: Record<string, any> = {
-                    network_id: String(chainId), 
-                    block_number: await signer.provider.getBlockNumber(),
-                    from: signer.account.address,
-                    to: signer.account.address,
-                    gas: 3000000,
-                    input: simulationData
-                };
-
-                const simulation = await fetch(
-                    TENDERLY_SIMULATION_URL,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'X-Access-Key': process.env.TENDERLY_ACCESS_KEY as string,
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(payload)
-                    }
-                );
-
-                const simulationResponse = await simulation.json();
-
-                const tenderlyUrl = getTenderlySimulationUrl({
+                tenderlyUrl = getTenderlySimulationUrl({
                     accountSlug: process.env.TENDERLY_ACCOUNT_SLUG as string,
                     projectSlug: process.env.TENDERLY_PROJECT_SLUG as string,
                     chainId: chainId,
                     gas: 3000000,
                     block: await signer.provider.getBlockNumber(),
                     blockIndex: 0,
-                    contractAddress: signer.account.address, // On the smart wallet account
-                    contractFunction: 'execute', // call execute
-                    // craft the arguments for the execute contract method
-                    functionInputs: [[ 
-                        { 
-                            to: contractAddress, // ERC20 token
-                            data // mint
-                        }
-                    ], 0, new Uint8Array([])] // nonce, signature
+                    contractAddress: signedTx.entrypoint, 
+                    rawFunctionInput: simulationData
                 });
             }
 
@@ -179,7 +144,8 @@ export async function erc20Mint(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
-                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+                    txSimulationUrl: tenderlyUrl ?? null
                 }
             });
 
@@ -189,6 +155,7 @@ export async function erc20Mint(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl ?? null,
                     error: error instanceof Error ? error.message : 'Failed to execute mint'
                 }
             });
