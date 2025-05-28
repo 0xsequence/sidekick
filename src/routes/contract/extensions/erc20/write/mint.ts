@@ -8,6 +8,7 @@ import { TransactionService } from "../../../../../services/transaction.service"
 import { logRequest, logStep } from "../../../../../utils/loggingUtils";
 import { TENDERLY_SIMULATION_URL } from "../../../../../constants/general";
 import { getTenderlySimulationUrl } from "../../../utils/tenderly/getSimulationUrl";
+import { commons } from "@0xsequence/core";
 
 type ERC20MintRequestBody = {
     to: string;
@@ -109,13 +110,28 @@ export async function erc20Mint(fastify: FastifyInstance) {
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint", args: [to, amount] } });
 
             if(process.env.DEBUG === 'true') {
+
+                // call execute on the smart account
+                const simulationData = commons.transaction.encodeBundleExecData({
+                    entrypoint: signer.account.address,
+                    transactions: [
+                        {
+                            to: contractAddress,
+                            data
+                        }
+                    ]
+                })
+
+                // Do I need to do this ?
+                // const sequenceTransaction = commons.transaction.toSequenceTransaction(signer.account.address, tx)
+
                 const payload: Record<string, any> = {
-                    network_id: String(chainId), // Tenderly expects string
+                    network_id: String(chainId), 
                     block_number: await signer.provider.getBlockNumber(),
                     from: signer.account.address,
-                    to: contractAddress,
+                    to: signer.account.address,
                     gas: 3000000,
-                    input: data
+                    input: simulationData
                 };
 
                 const simulation = await fetch(
@@ -136,18 +152,19 @@ export async function erc20Mint(fastify: FastifyInstance) {
                     accountSlug: process.env.TENDERLY_ACCOUNT_SLUG as string,
                     projectSlug: process.env.TENDERLY_PROJECT_SLUG as string,
                     chainId: chainId,
-                    from: signer.account.address,
                     gas: 3000000,
                     block: await signer.provider.getBlockNumber(),
                     blockIndex: 0,
-                    contractAddress: contractAddress,
-                    contractFunction: 'mint',
-                    rawFunctionInput: data,
-                    functionInputs: [to, amount]
+                    contractAddress: signer.account.address, // On the smart wallet account
+                    contractFunction: 'execute', // call execute
+                    // craft the arguments for the execute contract method
+                    functionInputs: [[ 
+                        { 
+                            to: contractAddress, // ERC20 token
+                            data // mint
+                        }
+                    ], 0, new Uint8Array([])] // nonce, signature
                 });
-
-                console.log(simulationResponse);
-                console.log(tenderlyUrl);
             }
 
             logStep(request, 'Sending mint transaction...');

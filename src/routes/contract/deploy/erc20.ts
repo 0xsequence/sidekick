@@ -150,7 +150,11 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 
             logStep(request, 'Deploy transaction success', { txHash: receipt?.hash });
 
-            if (process.env.VERIFY_CONTRACT_ON_DEPLOY === 'true' && !isContractVerified(deployedContractAddress, chainId)) {
+            logStep(request, 'Checking if contract is verified')
+            const isVerified = await isContractVerified(deployedContractAddress, chainId);
+            logStep(request, 'Contract verification result:', { isVerified });
+            
+            if (process.env.VERIFY_CONTRACT_ON_DEPLOY === 'true' && !isVerified) {
                 logStep(request, 'Verifying contract', {
                     chainId,
                     contractAddress: deployedContractAddress,

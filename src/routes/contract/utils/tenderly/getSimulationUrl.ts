@@ -4,7 +4,6 @@ export const getTenderlySimulationUrl = ({
     accountSlug,
     projectSlug,
     chainId,
-    from,
     gas,
     gasPrice,
     value = "0",
@@ -18,11 +17,10 @@ export const getTenderlySimulationUrl = ({
     const baseUrl = `https://dashboard.tenderly.co/${accountSlug}/${projectSlug}/simulator/new`;
     const params = new URLSearchParams({
         network: chainId.toString(),
-        from,
         value: value.toString(),
-        rawFunctionInput,
     });
 
+    if (rawFunctionInput) params.set("rawFunctionInput", rawFunctionInput);
     if (gas) params.set("gas", gas.toString());
     if (gasPrice) params.set("gasPrice", gasPrice.toString());
     if (block) params.set("block", block.toString());
