@@ -42,6 +42,22 @@ export const verifyContract = async (params: VerifyContractParams) => {
     return response;
 }
 
+export const getContractSourceCode = async (contractAddress: string, chainId: string) => {
+    const url = `${ETHERSCAN_V2_API}?chainid=${chainId}&module=contract&action=getsourcecode&address=${contractAddress}&apikey=${process.env.ETHERSCAN_API_KEY}`;
+    console.log('URL', url);
+    const response = await fetch(url, {
+        method: 'GET',
+    })
+        .then(res => res.json())
+        .catch(console.error);
+    return response.result[0].SourceCode;
+}
+
+export const isContractVerified = async (contractAddress: string, chainId: string) => {
+    const sourceCode = await getContractSourceCode(contractAddress, chainId);
+    return sourceCode !== null && sourceCode !== undefined;
+}
+
 /**
  * Extracts the first source file from the sources object and returns it in the format "contract/{name.sol}:{name}".
  * @param sources The sources object from the contract JSON input.

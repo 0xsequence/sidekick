@@ -6,7 +6,7 @@ import { erc20bytecode } from "../../../constants/bytecodes/erc20";
 import { TransactionService } from "../../../services/transaction.service";
 import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
 import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
-import { verifyContract } from "../../../utils/contractVerification";
+import { isContractVerified, verifyContract } from "../../../utils/contractVerification";
 import { erc20JsonInputMetadata } from "../../../constants/contractJsonInputs/erc20";
 
 type ERC20DeployRequestBody = {
@@ -150,7 +150,7 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 
             logStep(request, 'Deploy transaction success', { txHash: receipt?.hash });
 
-            if (process.env.VERIFY_CONTRACT_ON_DEPLOY === 'true') {
+            if (process.env.VERIFY_CONTRACT_ON_DEPLOY === 'true' && !isContractVerified(deployedContractAddress, chainId)) {
                 logStep(request, 'Verifying contract', {
                     chainId,
                     contractAddress: deployedContractAddress,
