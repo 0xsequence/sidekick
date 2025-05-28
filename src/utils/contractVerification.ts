@@ -42,20 +42,19 @@ export const verifyContract = async (params: VerifyContractParams) => {
     return response;
 }
 
-export const getContractSourceCode = async (contractAddress: string, chainId: string) => {
+export const getContractSourceCode = async (contractAddress: string, chainId: string): Promise<string | null> => {
     const url = `${ETHERSCAN_V2_API}?chainid=${chainId}&module=contract&action=getsourcecode&address=${contractAddress}&apikey=${process.env.ETHERSCAN_API_KEY}`;
-    console.log('URL', url);
     const response = await fetch(url, {
         method: 'GET',
     })
         .then(res => res.json())
         .catch(console.error);
-    return response.result[0].SourceCode;
+    return response.result[0].SourceCode ?? null;
 }
 
-export const isContractVerified = async (contractAddress: string, chainId: string) => {
+export const isContractVerified = async (contractAddress: string, chainId: string): Promise<boolean> => {
     const sourceCode = await getContractSourceCode(contractAddress, chainId);
-    return sourceCode !== null && sourceCode !== undefined;
+    return sourceCode !== '' && sourceCode !== null && sourceCode !== undefined;
 }
 
 /**
