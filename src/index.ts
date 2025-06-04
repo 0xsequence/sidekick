@@ -58,7 +58,7 @@ await fastify.register(swagger)
 fastify.register(FastifyRedis, {
     host: process.env.REDIS_HOST || 'localhost',
     port: Number(process.env.REDIS_PORT) || 6379,
-    password: process.env.REDIS_PASSWORD || 'sequence',
+    password: process.env.REDIS_PASSWORD || '',
     closeClient: true
 })
 

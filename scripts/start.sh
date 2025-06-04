@@ -4,4 +4,4 @@
 pnpm prisma migrate deploy
 
 # Start the application
-pnpm start 
+pnpm start
