@@ -1,10 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../../../../utils/wallet";
-import { encodeFunctionData, type Abi } from "viem";
+import { encodeFunctionData } from "viem";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { erc721ItemsAbi } from "../../../../../../constants/abis/erc721Items";
 import { logRequest, logStep, logError } from '../../../../../../utils/loggingUtils';
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../../utils/tenderly/getSimulationUrl";
 
 type ERC721ItemsBatchBurnRequestBody = {
     tokenIds: string[]; 
@@ -19,6 +20,7 @@ type ERC721ItemsBatchBurnResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 };
@@ -61,6 +63,7 @@ const ERC721ItemsBatchBurnSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true },
                     },
                 },
@@ -81,6 +84,9 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             logRequest(request);
+
+            let tenderlyUrl: string | null = null;
+
             try {
                 const { chainId, contractAddress } = request.params;
                 const { tokenIds } = request.body;
@@ -100,6 +106,21 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
                 });
                 logStep(request, 'Function data encoded', { tokenIds });
 
+                const tx = {
+                    to: contractAddress,
+                    data: batchBurnData
+                }
+
+                const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+                let tenderlyUrl = getTenderlySimulationUrl({
+                    chainId: chainId,
+                    gas: 3000000,
+                    block: await signer.provider.getBlockNumber(),
+                    blockIndex: 0,
+                    contractAddress: signedTx.entrypoint,
+                    rawFunctionInput: simulationData
+                });
+                
                 logStep(request, 'Sending batchBurn transaction...');
                 const txResponse = await signer.sendTransaction({
                     to: contractAddress,
@@ -132,6 +153,7 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
                     result: {
                         txHash: receipt?.hash ?? null,
                         txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+                        txSimulationUrl: tenderlyUrl ?? null
                     },
                 });
             } catch (error) {
@@ -144,6 +166,7 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
                     result: {
                         txHash: null,
                         txUrl: null,
+                        txSimulationUrl: tenderlyUrl ?? null,
                         error: errorMessage,
                     },
                 });

@@ -1,10 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
-import { encodeDeployData, encodeFunctionData } from "viem";
+import { encodeDeployData, encodeFunctionData, zeroAddress } from "viem";
 import { TransactionService } from "../../../services/transaction.service";
 import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
 import { ethers } from "ethers"; 
 import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
+import { getTenderlySimulationUrl } from "../utils/tenderly/getSimulationUrl";
+import { prepareTransactionsForTenderlySimulation } from "../utils/tenderly/getSimulationUrl";
 
 type DeployUpgradeableContractRequestBody = {
     implementationAbi: Array<ethers.InterfaceAbi>;
@@ -24,6 +26,7 @@ type DeployUpgradeableContractResponse = {
         initializationTxHash: string | null;
         initializationTxUrl: string | null;
         deployedContractAddress: string | null;
+        txSimulationUrls?: string[];
         error?: string;
     };
 };
@@ -72,6 +75,7 @@ const DeployUpgradeableContractSchema = {
                         initializationTxHash: { type: 'string' },
                         initializationTxUrl: { type: 'string' },
                         deployedContractAddress: { type: 'string' },
+                        txSimulationUrls: { type: 'array', items: { type: 'string' } },
                         error: { type: 'string', nullable: true },
                     },
                 },
@@ -113,6 +117,8 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
             schema: DeployUpgradeableContractSchema,
         },
         async (request, reply) => {
+            let deploymentSimulationUrl: string | null = null;
+            let initializationSimulationUrl: string | null = null;
             try {
                 logRequest(request);
                 const { chainId } = request.params;
@@ -159,10 +165,23 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
                 });
                 logStep(request, 'Deploy data prepared');
 
-                logStep(request, 'Sending implementation deployment transaction');
-                const deployTxResponse = await signer.sendTransaction({
-                    data: deployData,
+                const deploymentTx = {
+                    to: zeroAddress,
+                    data: deployData
+                }
+
+                const {simulationData: deploymentSimulationData, signedTx: deploymentSignedTx} = await prepareTransactionsForTenderlySimulation(signer, [deploymentTx], Number(chainId));
+                let deploymentSimulationUrl = getTenderlySimulationUrl({
+                    chainId: chainId,
+                    gas: 3000000,
+                    block: await signer.provider.getBlockNumber(),
+                    contractAddress: deploymentSignedTx.entrypoint,
+                    blockIndex: 0,
+                    rawFunctionInput: deploymentSimulationData
                 });
+
+                logStep(request, 'Sending implementation deployment transaction');
+                const deployTxResponse = await signer.sendTransaction(deploymentTx);
                 logStep(request, 'Implementation deployment transaction sent');
                 
                 logStep(request, 'Waiting for implementation deployment receipt', { txHash: deployTxResponse.hash });
@@ -200,11 +219,23 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
                 });
                 logStep(request, 'Initialize data prepared', { initializeData });
 
-                logStep(request, `Sending initialization transaction to ${deployedContractAddress} for function '${initializeFunctionName}'`);
-                const initializeTxResponse = await signer.sendTransaction({
+                const initializationTx = {
                     to: deployedContractAddress,
-                    data: initializeData,
+                    data: initializeData
+                }
+
+                const {simulationData: initializationSimulationData, signedTx: initializationSignedTx} = await prepareTransactionsForTenderlySimulation(signer, [initializationTx], Number(chainId));
+                let initializationSimulationUrl = getTenderlySimulationUrl({
+                    chainId: chainId,
+                    gas: 3000000,
+                    block: await signer.provider.getBlockNumber(),
+                    contractAddress: initializationSignedTx.entrypoint,
+                    blockIndex: 0,
+                    rawFunctionInput: initializationSimulationData
                 });
+
+                logStep(request, `Sending initialization transaction to ${deployedContractAddress} for function '${initializeFunctionName}'`);
+                const initializeTxResponse = await signer.sendTransaction(initializationTx);
                 logStep(request, 'Initialization transaction sent', { initializationTxHash: initializeTxResponse.hash });
 
                 logStep(request, 'Waiting for initialization receipt');
@@ -237,6 +268,7 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
                         initializationTxHash: initializeReceipt?.hash ?? null,
                         initializationTxUrl: getBlockExplorerUrl(Number(chainId), initializeReceipt?.hash ?? ''),
                         deployedContractAddress: deployedContractAddress,
+                        txSimulationUrls: [deploymentSimulationUrl, initializationSimulationUrl],
                     },
                 });
             } catch (error) {
@@ -252,6 +284,7 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
                         initializationTxHash: null,
                         initializationTxUrl: null,
                         deployedContractAddress: null,
+                        txSimulationUrls: [deploymentSimulationUrl ?? '', initializationSimulationUrl ?? ''],
                         error: errorMessage,
                     },
                 });

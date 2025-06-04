@@ -6,6 +6,7 @@ import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { erc1155ItemsAbi } from "../../../../../../constants/abis/erc1155Items";
 import { logRequest, logStep } from "../../../../../../utils/loggingUtils";
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../../utils/tenderly/getSimulationUrl";
 
 type ERC1155ItemsBurnRequestBody = {
     tokenId: string;
@@ -21,6 +22,7 @@ type ERC1155ItemsBurnResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 };
@@ -73,6 +75,7 @@ const ERC1155ItemsBurnSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true },
                     },
                 },
@@ -92,6 +95,7 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
             schema: ERC1155ItemsBurnSchema,
         },
         async (request, reply) => {
+            let tenderlyUrl: string | null = null;
             try {
                 logRequest(request);
 
@@ -117,6 +121,16 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
                     data: callData
                 };
                 logStep(request, 'Tx prepared', { tx });
+
+                const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+                let tenderlyUrl = getTenderlySimulationUrl({
+                    chainId: chainId,
+                    gas: 3000000,
+                    block: await signer.provider.getBlockNumber(),
+                    blockIndex: 0,
+                    contractAddress: signedTx.entrypoint,
+                    rawFunctionInput: simulationData
+                });
                 const txService = new TransactionService(fastify);
 
                 // Create pending transaction first
@@ -139,7 +153,8 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
                 return reply.code(200).send({
                     result: {
                         txHash: txResponse.hash,
-                        txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+                        txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+                        txSimulationUrl: tenderlyUrl ?? null
                     }
                 });
             } catch (error) {
@@ -149,6 +164,7 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
                     result: {
                         txHash: null,
                         txUrl: null,
+                        txSimulationUrl: tenderlyUrl ?? null,
                         error: errorMessage,
                     },
                 });

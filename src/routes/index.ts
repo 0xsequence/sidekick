@@ -48,6 +48,8 @@ import { erc1155ItemsInitialize } from './contract/extensions/erc1155/erc1155Ite
 import { erc1155ItemsBatchBurn } from './contract/extensions/erc1155/erc1155Items/write/batchBurn';
 import { erc1155ItemsDeploy } from './contract/deploy/erc1155Items';
 import metrics from '../plugins/metrics/metrics';
+import { simulateDeployment } from './contract/simulate/simulateDeployment';
+import { simulateTransaction } from './contract/simulate/simulateTransaction';
 import { verifyContract } from './contract/utils/verify/verify';
 
 export default async function (fastify: FastifyInstance) {
@@ -156,6 +158,10 @@ export default async function (fastify: FastifyInstance) {
     getJobs(fastify);
     cleanJobs(fastify);
 
+    // Simulate transaction
+    simulateDeployment(fastify);
+    simulateTransaction(fastify);
+    
     // Contract verification
     verifyContract(fastify);
 }

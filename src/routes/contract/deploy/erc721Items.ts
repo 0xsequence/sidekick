@@ -1,12 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { getSigner } from "../../../utils/wallet";
-import { encodeDeployData, encodeFunctionData, type Abi } from "viem";
+import { encodeDeployData, encodeFunctionData, zeroAddress } from "viem";
 import { TransactionService } from "../../../services/transaction.service";
 import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
 import { erc721ItemsBytecode } from "../../../constants/bytecodes/erc721Items";
 import { erc721ItemsAbi } from "../../../constants/abis/erc721Items";
-import { ethers, type TransactionReceipt, type TransactionResponse } from "ethers";
+import { type TransactionReceipt, type TransactionResponse } from "ethers";
 import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../utils/tenderly/getSimulationUrl";
 
 
 type ERC721ItemsDeployAndInitializeRequestBody = {
@@ -31,6 +32,7 @@ type ERC721ItemsDeployAndInitializeResponse = {
         initializationTxUrl: string | null;
         deployedContractAddress: string | null;
         error?: string;
+        txSimulationUrls?: string[];
     };
 };
 
@@ -85,6 +87,7 @@ const ERC721ItemsDeployAndInitializeSchema = {
                         initializationTxUrl: { type: 'string' },
                         deployedContractAddress: { type: 'string' },
                         error: { type: 'string', nullable: true },
+                        txSimulationUrls: { type: 'array', items: { type: 'string' } },
                     },
                 },
             },
@@ -103,6 +106,9 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
             schema: ERC721ItemsDeployAndInitializeSchema,
         },
         async (request, reply) => {
+            let deploymentSimulationUrl: string | null = null;
+            let initializationSimulationUrl: string | null = null;
+
             try {
                 logRequest(request);
                 const { chainId } = request.params;
@@ -134,10 +140,23 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
                 });
                 logStep(request, 'Deploy data prepared', { deployData });
 
-                logStep(request, 'Sending deployment transaction', { deployData });
-                const deployTx: TransactionResponse = await signer.sendTransaction({
+                const deploymentTx = {
+                    to: zeroAddress,
                     data: deployData
+                }
+
+                const {simulationData: deploymentSimulationData, signedTx: deploymentSignedTx} = await prepareTransactionsForTenderlySimulation(signer, [deploymentTx], Number(chainId));
+                let deploymentSimulationUrl = getTenderlySimulationUrl({
+                    chainId: chainId,
+                    gas: 3000000,
+                    block: await signer.provider.getBlockNumber(),
+                    contractAddress: deploymentSignedTx.entrypoint,
+                    blockIndex: 0,
+                    rawFunctionInput: deploymentSimulationData
                 });
+
+                logStep(request, 'Sending deployment transaction', { deployData });
+                const deployTx: TransactionResponse = await signer.sendTransaction(deploymentTx);
                 logStep(request, 'Deployment transaction sent', { deployTx });
 
                 logStep(request, 'Waiting for deployment receipt', { txHash: deployTx.hash });
@@ -187,11 +206,26 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
                 });
                 logStep(request, 'Initialize data prepared', { initializeData });
 
-                logStep(request, 'Sending initialization transaction', { to: deployedContractAddress, initializeData });
-                const initializeTx = await signer.sendTransaction({
+                const initializationTx = {
                     to: deployedContractAddress,
-                    data: initializeData,
+                    data: initializeData
+                }
+
+                logStep(request, 'Preparing initialization data for Tenderly simulation');
+                const { simulationData: initializationSimulationData, signedTx: initializationSignedTx } = await prepareTransactionsForTenderlySimulation(signer, [initializationTx], Number(chainId));
+
+                logStep(request, 'Getting initialization simulation URL');
+                let initializationSimulationUrl = getTenderlySimulationUrl({
+                    chainId: chainId,
+                    gas: 3000000,
+                    block: await signer.provider.getBlockNumber(),
+                    contractAddress: initializationSignedTx.entrypoint,
+                    blockIndex: 0,
+                    rawFunctionInput: initializationSimulationData
                 });
+
+                logStep(request, 'Sending initialization transaction', { to: deployedContractAddress, initializeData });
+                const initializeTx = await signer.sendTransaction(initializationTx);
                 logStep(request, 'Initialization transaction sent');
 
                 logStep(request, 'Waiting for initialization receipt', { txHash: initializeTx.hash });
@@ -225,6 +259,7 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
                         initializationTxHash: initializeReceipt?.hash ?? null,
                         initializationTxUrl: getBlockExplorerUrl(Number(chainId), initializeReceipt?.hash ?? ''),
                         deployedContractAddress: deployedContractAddress,
+                        txSimulationUrls: [deploymentSimulationUrl, initializationSimulationUrl],
                     },
                 });
             } catch (error) {
@@ -239,6 +274,7 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
                         initializationTxHash: null,
                         initializationTxUrl: null,
                         deployedContractAddress: null,
+                        txSimulationUrls: [deploymentSimulationUrl ?? '', initializationSimulationUrl ?? ''],
                         error: error instanceof Error ? error.message : 'Failed to deploy and initialize ERC721Items contract',
                     },
                 });

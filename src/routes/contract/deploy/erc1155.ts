@@ -8,6 +8,7 @@ import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils
 import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
 import { verifyContract } from "../../../utils/contractVerification";
 import { erc1155JsonInputMetadata } from "../../../constants/contractJsonInputs/erc1155";
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../utils/tenderly/getSimulationUrl";
 
 type ERC1155DeployRequestBody = {
     defaultAdmin: string;
@@ -24,6 +25,7 @@ type ERC1155DeployResponse = {
         txHash: string | null;
         txUrl: string | null;
         deployedContractAddress: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -64,6 +66,7 @@ const ERC1155DeploySchema = {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
                         deployedContractAddress: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -80,6 +83,7 @@ export async function erc1155Deploy(fastify: FastifyInstance) {
     }>('/deploy/erc1155/:chainId', {
         schema: ERC1155DeploySchema
     }, async (request, reply) => {
+        let tenderlyUrl: string | null = null;
         try {
             logRequest(request);
 
@@ -107,6 +111,16 @@ export async function erc1155Deploy(fastify: FastifyInstance) {
                 data
             });
             logStep(request, 'Deploy transaction sent', { tx });
+
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                contractAddress: signedTx.entrypoint,
+                blockIndex: 0,
+                rawFunctionInput: simulationData
+            });
 
             logStep(request, 'Waiting for deploy receipt', { txHash: tx.hash });
             const receipt = await tx.wait();
@@ -171,6 +185,7 @@ export async function erc1155Deploy(fastify: FastifyInstance) {
                 result: {
                     txHash: receipt?.hash ?? null,
                     txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+                    txSimulationUrl: tenderlyUrl,
                     deployedContractAddress: deployedContractAddress
                 }
             });
@@ -184,6 +199,7 @@ export async function erc1155Deploy(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl,
                     deployedContractAddress: null,
                     error: error instanceof Error ? error.message : 'Failed to deploy ERC1155'
                 }

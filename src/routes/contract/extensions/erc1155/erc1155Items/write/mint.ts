@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { erc1155ItemsAbi } from "../../../../../../constants/abis/erc1155Items";
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../../utils/tenderly/getSimulationUrl";
 
 type ERC1155ItemsMintRequestBody = {
   to: string;
@@ -22,6 +23,7 @@ type ERC1155ItemsMintResponse = {
   result?: {
     txHash: string | null;
     txUrl: string | null;
+    txSimulationUrl?: string | null;
     error?: string;
   };
 };
@@ -62,6 +64,7 @@ const ERC1155ItemsMintSchema = {
           properties: {
             txHash: { type: 'string' },
             txUrl: { type: 'string' },
+            txSimulationUrl: { type: 'string', nullable: true },
             error: { type: 'string', nullable: true }
           }
         }
@@ -79,6 +82,7 @@ export async function erc1155ItemsMint(fastify: FastifyInstance) {
     '/write/erc1155Items/:chainId/:contractAddress/mint',
     { schema: ERC1155ItemsMintSchema },
     async (request, reply) => {
+      let tenderlyUrl: string | null = null;
       try {
         const { to, tokenId, amount, data } = request.body;
         const { chainId, contractAddress } = request.params;
@@ -99,6 +103,16 @@ export async function erc1155ItemsMint(fastify: FastifyInstance) {
           to: contractAddress,
           data: callData
         };
+        
+        const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+        let tenderlyUrl = getTenderlySimulationUrl({
+          chainId: chainId,
+          gas: 3000000,
+          block: await signer.provider.getBlockNumber(),
+          contractAddress: signedTx.entrypoint,
+          blockIndex: 0,
+          rawFunctionInput: simulationData
+        });
 
         const txService = new TransactionService(fastify);
 
@@ -117,7 +131,8 @@ export async function erc1155ItemsMint(fastify: FastifyInstance) {
         return reply.code(200).send({
           result: {
             txHash: txResponse.hash,
-            txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+            txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+            txSimulationUrl: tenderlyUrl ?? null
           }
         });
       } catch (error) {
@@ -126,6 +141,7 @@ export async function erc1155ItemsMint(fastify: FastifyInstance) {
           result: {
             txHash: null,
             txUrl: null,
+            txSimulationUrl: tenderlyUrl ?? null,
             error: error instanceof Error ? error.message : 'Failed to mint ERC1155Items'
           }
         });

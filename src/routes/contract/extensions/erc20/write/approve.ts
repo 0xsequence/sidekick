@@ -7,6 +7,7 @@ import { ethers } from "ethers";
 import { erc20Abi } from "abitype/abis";
 import type { TransactionResponse } from "ethers";
 import { TransactionService } from "../../../../../services/transaction.service";
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../utils/tenderly/getSimulationUrl";
 
 type ERC20ApproveRequestBody = {
     spender: string;
@@ -22,6 +23,7 @@ type ERC20ApproveResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -60,6 +62,7 @@ const ERC20ApproveSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -77,6 +80,9 @@ export async function erc20Approve(fastify: FastifyInstance) {
         schema: ERC20ApproveSchema
     }, async (request, reply) => {
         logRequest(request);
+
+        let tenderlyUrl: string | null = null;
+
         try {
             const { spender, amount } = request.body;
             const { chainId, contractAddress } = request.params;
@@ -106,6 +112,16 @@ export async function erc20Approve(fastify: FastifyInstance) {
                 data
             }
 
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                blockIndex: 0,
+                contractAddress: signedTx.entrypoint,
+                rawFunctionInput: simulationData
+            });
+
             const txService = new TransactionService(fastify);
 
             // Create pending transaction first
@@ -122,7 +138,8 @@ export async function erc20Approve(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
-                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+                    txSimulationUrl: tenderlyUrl ?? null
                 }
             });
 
@@ -135,6 +152,7 @@ export async function erc20Approve(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl ?? null,
                     error: error instanceof Error ? error.message : 'Failed to execute approve'
                 }
             });

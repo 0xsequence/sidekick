@@ -6,7 +6,8 @@ import { getBlockExplorerUrl } from '../../../utils/other'
 import { TransactionService } from '../../../services/transaction.service';
 import { AbiSchema } from "../../../schemas/contractSchemas";
 import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
-// Types for request/response
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../utils/tenderly/getSimulationUrl";
+
 type WriteRequestBody = {
     abi?: InterfaceAbi;
     args?: Array<string>;
@@ -22,6 +23,7 @@ export type WriteContractResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -81,6 +83,7 @@ const WriteContractSchema = {
                     properties: {
                         txHash: { type: 'string', nullable: true },
                         txUrl: { type: 'string', nullable: true },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -98,6 +101,7 @@ export async function writeContract(fastify: FastifyInstance) {
         schema: WriteContractSchema
     }, async (request, reply) => {
         logRequest(request);
+        let tenderlyUrl: string | null = null;
         try {
             const { args, abi: abiFromBody } = request.body;
             const { chainId, contractAddress, functionName } = request.params;
@@ -167,6 +171,16 @@ export async function writeContract(fastify: FastifyInstance) {
                 data
             }
 
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                blockIndex: 0,
+                contractAddress: signedTx.entrypoint,
+                rawFunctionInput: simulationData
+            });
+
             const txService = new TransactionService(fastify);
             
             // Create pending transaction first
@@ -184,7 +198,8 @@ export async function writeContract(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
-                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+                    txSimulationUrl: tenderlyUrl ?? null
                 }
             });
 
@@ -197,6 +212,7 @@ export async function writeContract(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl ?? null,
                     error: error instanceof Error ? error.message : 'Failed to execute contract transaction'
                 }
             });
