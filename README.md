@@ -42,7 +42,7 @@ Instructions to run the sidekick in development mode:
 `pnpm run dev` (Will start the server in development mode)
 `pnpm run dev:withRedis` (Will start the server and Redis in development mode)
 
-## Analytics & Monitoring
+## Analytics & Monitoring 📊
 
 Sidekick provides several tools for monitoring, metrics, and alerting. Here's where to find each:
 
@@ -74,11 +74,11 @@ Sidekick provides several tools for monitoring, metrics, and alerting. Here's wh
 - **Access:** [http://localhost:9115](http://localhost:9115)
 - **Note:** Used by Prometheus for external endpoint checks.
 
-### DEBUG mode
+### DEBUG mode 🐛
 
 Sidekick provides a DEBUG mode that will give you detailed logs so you can see what's happening under the hood, add DEBUG="true" as an environment variable to your .env file to turn it on.
 
-### Tenderly
+### Tenderly 🔍
 
 Sidekick is integrated with Tenderly, you can use it to simulate transactions, deployments, or get a transaction simulation URL and debug directly from the Tenderly UI with just one click. For the best results, we recommend that your contracts are verified.
 To use Tenderly, you need to add the following environment variables to your .env file:
@@ -87,7 +87,7 @@ TENDERLY_ACCESS_KEY=...
 TENDERLY_ACCOUNT_SLUG=..
 TENDERLY_PROJECT_SLUG=..
 
-### Contract Verification
+### Contract Verification ✅
 
 Sidekick automatically verifies contracts at deployment time, it checks if a contract is already verified, if not it will verify it.
 For now, this only works for the following contracts:
@@ -100,6 +100,14 @@ To turn automatic verification on you need the following environment variables:
 
 VERIFY_CONTRACT_ON_DEPLOY=true
 ETHERSCAN_API_KEY=...
+
+### Public Docker Image on Github Container Registry 🐳
+
+You can pull the latest version of Sidekick from the Github Container Registry:
+
+```
+docker pull ghcr.io/0xsequence/sidekick:latest
+```
 
 Verification for other contract templates will be added soon.
 
