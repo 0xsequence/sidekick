@@ -6,6 +6,7 @@ import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { TransactionService } from "../../../../../services/transaction.service";
 import { erc1155Abi } from "../../../../../constants/abis/erc1155";
 import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../utils/tenderly/getSimulationUrl";
 
 type ERC1155GrantRoleRequestBody = {
     role: string;
@@ -21,6 +22,7 @@ type ERC1155GrantRoleResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -59,6 +61,7 @@ const ERC1155GrantRoleSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -89,6 +92,7 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
         schema: ERC1155GrantRoleSchema
     }, async (request, reply) => {
         logRequest(request);
+        let tenderlyUrl: string | null = null;
         try {
             const { role, account } = request.body;
             const { chainId, contractAddress } = request.params;
@@ -118,6 +122,16 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
                 data
             }
 
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                blockIndex: 0,
+                contractAddress: signedTx.entrypoint,
+                rawFunctionInput: simulationData
+            });
+
             const txService = new TransactionService(fastify);
 
             // Create pending transaction first
@@ -136,7 +150,8 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
-                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+                    txSimulationUrl: tenderlyUrl ?? null
                 }
             });
 
@@ -149,6 +164,7 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl ?? null,
                     error: error instanceof Error ? error.message : 'Failed to mint NFT'
                 }
             });

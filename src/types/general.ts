@@ -1,6 +1,4 @@
 export type TenderlySimulatorUrlOptions = {
-    accountSlug: string;
-    projectSlug: string;
     chainId: number | string;
     from?: string;
     gas?: number | string;

@@ -6,6 +6,7 @@ import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { erc1155ItemsAbi } from "../../../../../../constants/abis/erc1155Items";
 import { logRequest, logStep } from "../../../../../../utils/loggingUtils";
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../../utils/tenderly/getSimulationUrl";
 
 type ERC1155ItemsBatchBurnRequestBody = {
   tokenIds: string[];
@@ -21,6 +22,7 @@ type ERC1155ItemsBatchBurnResponse = {
   result?: {
     txHash: string | null;
     txUrl: string | null;
+    txSimulationUrl?: string | null;
     error?: string;
   };
 };
@@ -59,6 +61,7 @@ const ERC1155ItemsBatchBurnSchema = {
           properties: {
             txHash: { type: 'string' },
             txUrl: { type: 'string' },
+            txSimulationUrl: { type: 'string', nullable: true },
             error: { type: 'string', nullable: true }
           }
         }
@@ -76,6 +79,7 @@ export async function erc1155ItemsBatchBurn(fastify: FastifyInstance) {
     '/write/erc1155Items/:chainId/:contractAddress/batchBurn',
     { schema: ERC1155ItemsBatchBurnSchema },
     async (request, reply) => {
+      let tenderlyUrl: string | null = null;
       try {
         logRequest(request);
         
@@ -105,6 +109,17 @@ export async function erc1155ItemsBatchBurn(fastify: FastifyInstance) {
           data: callData
         };
         logStep(request, 'Tx prepared', { tx });
+
+        const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+        let tenderlyUrl = getTenderlySimulationUrl({
+          chainId: chainId,
+          gas: 3000000,
+          block: await signer.provider.getBlockNumber(),
+          blockIndex: 0,
+          contractAddress: signedTx.entrypoint,
+          rawFunctionInput: simulationData
+        });
+
         const txService = new TransactionService(fastify);
 
         // Create pending transaction first
@@ -127,7 +142,8 @@ export async function erc1155ItemsBatchBurn(fastify: FastifyInstance) {
         return reply.code(200).send({
           result: {
             txHash: txResponse.hash,
-            txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+            txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+            txSimulationUrl: tenderlyUrl ?? null
           }
         });
       } catch (error) {
@@ -136,6 +152,7 @@ export async function erc1155ItemsBatchBurn(fastify: FastifyInstance) {
           result: {
             txHash: null,
             txUrl: null,
+            txSimulationUrl: tenderlyUrl ?? null,
             error: error instanceof Error ? error.message : 'Failed to batchBurn ERC1155Items'
           }
         });

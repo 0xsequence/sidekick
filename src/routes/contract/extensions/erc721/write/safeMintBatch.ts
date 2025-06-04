@@ -6,6 +6,7 @@ import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc721Abi } from "../../../../../constants/abis/erc721";
 import { TransactionService } from "../../../../../services/transaction.service";
 import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../utils/tenderly/getSimulationUrl";
 
 type ERC721SafeMintBatchRequestBody = {
     recipients: string[];
@@ -21,6 +22,7 @@ type ERC721SafeMintBatchResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -59,6 +61,7 @@ const ERC721SafeMintBatchSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -76,6 +79,9 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
         schema: ERC721SafeMintBatchSchema
     }, async (request, reply) => {
         logRequest(request);
+
+        let tenderlyUrl: string | null = null;
+
         try {
             const { recipients, tokenIds } = request.body;
             const { chainId, contractAddress } = request.params;
@@ -102,6 +108,16 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
             });
             logStep(request, 'Function data encoded for batch', { count: txs.length });
 
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, txs, Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                blockIndex: 0,
+                contractAddress: signedTx.entrypoint,
+                rawFunctionInput: simulationData
+            });
+
             const txService = new TransactionService(fastify);
 
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "safeMintBatch", args: [] } });
@@ -118,7 +134,8 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
-                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+                    txSimulationUrl: tenderlyUrl ?? null
                 }
             });
 
@@ -131,6 +148,7 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl ?? null,
                     error: error instanceof Error ? error.message : 'Failed to mint NFT'
                 }
             });

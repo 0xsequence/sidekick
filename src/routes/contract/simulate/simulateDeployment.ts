@@ -166,8 +166,6 @@ export async function simulateDeployment(fastify: FastifyInstance) {
             const data = await simulation.json();
 
             const tenderlyUrl = getTenderlySimulationUrl({
-                accountSlug: process.env.TENDERLY_ACCOUNT_SLUG as string,
-                projectSlug: process.env.TENDERLY_PROJECT_SLUG as string,
                 chainId: chainId,
                 from,
                 gas,

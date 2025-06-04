@@ -6,6 +6,7 @@ import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc721Abi } from "../../../../../constants/abis/erc721";
 import { TransactionService } from "../../../../../services/transaction.service";
 import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../utils/tenderly/getSimulationUrl";
 
 type ERC721MintRequestBody = {
     to: string;
@@ -25,6 +26,7 @@ type ERC721MintResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -82,6 +84,7 @@ const ERC721MintSchema = {
                     properties: {
                         txHash: { type: 'string', nullable: true },
                         txUrl: { type: 'string', nullable: true },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string' }
                     }
                 }
@@ -99,6 +102,9 @@ export async function erc721Mint(fastify: FastifyInstance) {
         schema: ERC721MintSchema
     }, async (request, reply) => {
         logRequest(request);
+
+        let tenderlyUrl: string | null = null;
+
         try {
             const { to, tokenId, options } = request.body;
             const { chainId, contractAddress } = request.params;
@@ -124,6 +130,16 @@ export async function erc721Mint(fastify: FastifyInstance) {
                 data
             };
 
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                blockIndex: 0,
+                contractAddress: signedTx.entrypoint,
+                rawFunctionInput: simulationData
+            });
+
             const txService = new TransactionService(fastify);
 
             const pendingTx = await txService.createPendingTransaction({ chainId, contractAddress, data: { functionName: "mint", args: [to, tokenId] } });
@@ -146,7 +162,8 @@ export async function erc721Mint(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
-                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+                    txSimulationUrl: tenderlyUrl ?? null
                 }
             });
 
@@ -159,6 +176,7 @@ export async function erc721Mint(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl ?? null,
                     error: error instanceof Error ? error.message : 'Failed to mint NFT'
                 }
             });

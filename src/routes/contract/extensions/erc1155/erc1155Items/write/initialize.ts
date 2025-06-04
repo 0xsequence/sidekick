@@ -5,6 +5,7 @@ import { TransactionService } from "../../../../../../services/transaction.servi
 import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { erc1155ItemsAbi } from "../../../../../../constants/abis/erc1155Items";
 import { logRequest, logStep, logError } from '../../../../../../utils/loggingUtils';
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../../utils/tenderly/getSimulationUrl";
 
 type ERC1155ItemsInitializeRequestBody = {
     owner: string;
@@ -24,6 +25,7 @@ type ERC1155ItemsInitializeResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 };
@@ -74,6 +76,7 @@ const ERC1155ItemsInitializeSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true },
                     },
                 },
@@ -106,6 +109,7 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             logRequest(request);
+            let tenderlyUrl: string | null = null;
             try {
                 const { chainId, contractAddress } = request.params;
                 const {
@@ -139,11 +143,22 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
                 });
                 logStep(request, 'Function data encoded', { owner, tokenName, tokenBaseURI, tokenContractURI, royaltyReceiver, royaltyFeeNumerator });
 
-                logStep(request, 'Sending initialize transaction...', { contractAddress, chainId });
-                const txResponse = await signer.sendTransaction({
+                const tx = {
                     to: contractAddress,
-                    data: initializeData,
+                    data: initializeData
+                }
+                const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+                let tenderlyUrl = getTenderlySimulationUrl({
+                    chainId: chainId,
+                    gas: 3000000,
+                    block: await signer.provider.getBlockNumber(),
+                    blockIndex: 0,
+                    contractAddress: signedTx.entrypoint,
+                    rawFunctionInput: simulationData
                 });
+
+                logStep(request, 'Sending initialize transaction...', { contractAddress, chainId });
+                const txResponse = await signer.sendTransaction(tx);
                 logStep(request, 'Initialize transaction sent', { txHash: txResponse.hash });
 
                 const receipt = await txResponse.wait();
@@ -170,6 +185,7 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
                     result: {
                         txHash: receipt?.hash ?? null,
                         txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+                        txSimulationUrl: tenderlyUrl ?? null
                     },
                 });
             } catch (error) {
@@ -182,6 +198,7 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
                     result: {
                         txHash: null,
                         txUrl: null,
+                        txSimulationUrl: tenderlyUrl ?? null,
                         error: errorMessage,
                     },
                 });

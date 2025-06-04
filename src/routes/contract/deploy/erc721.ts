@@ -8,6 +8,7 @@ import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils
 import { logRequest, logStep, logError } from '../../../utils/loggingUtils';
 import { verifyContract } from "../../../utils/contractVerification";
 import { erc721JsonInputMetadata } from "../../../constants/contractJsonInputs/erc721";
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../utils/tenderly/getSimulationUrl";
 
 type ERC721DeployRequestBody = {
     defaultAdmin: string;
@@ -24,6 +25,7 @@ type ERC721DeployResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         deployedContractAddress: string | null;
         error?: string;
     };
@@ -65,6 +67,7 @@ const ERC721DeploySchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         deployedContractAddress: { type: 'string' },
                         error: { type: 'string', nullable: true }
                     }
@@ -88,6 +91,7 @@ export async function erc721Deploy(fastify: FastifyInstance) {
     }>('/deploy/erc721/:chainId', {
         schema: ERC721DeploySchema
     }, async (request, reply) => {
+        let tenderlyUrl: string | null = null;
         try {
             logRequest(request);
 
@@ -114,6 +118,16 @@ export async function erc721Deploy(fastify: FastifyInstance) {
                 data
             });
             logStep(request, 'Deploy transaction sent', { tx });
+
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                contractAddress: signedTx.entrypoint,
+                blockIndex: 0,
+                rawFunctionInput: simulationData
+            });
 
             logStep(request, 'Waiting for deploy receipt', { txHash: tx.hash });
             const receipt = await tx.wait();
@@ -186,6 +200,7 @@ export async function erc721Deploy(fastify: FastifyInstance) {
                 result: {
                     txHash: receipt?.hash ?? null,
                     txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+                    txSimulationUrl: tenderlyUrl,
                     deployedContractAddress: deployedContractAddress
                 }
             });
@@ -199,6 +214,7 @@ export async function erc721Deploy(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl,
                     deployedContractAddress: null,
                     error: error instanceof Error ? error.message : 'Failed to deploy ERC721'
                 }

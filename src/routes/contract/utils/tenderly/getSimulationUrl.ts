@@ -1,8 +1,8 @@
+import type { Transaction } from "ethers";
 import type { TenderlySimulatorUrlOptions } from "../../../../types/general";
+import { commons } from "@0xsequence/core";
 
 export const getTenderlySimulationUrl = ({
-    accountSlug,
-    projectSlug,
     chainId,
     gas,
     gasPrice,
@@ -14,6 +14,9 @@ export const getTenderlySimulationUrl = ({
     rawFunctionInput,
     functionInputs,
 }: TenderlySimulatorUrlOptions): string => {
+    const accountSlug = process.env.TENDERLY_ACCOUNT_SLUG as string;
+    const projectSlug = process.env.TENDERLY_PROJECT_SLUG as string;
+    
     const baseUrl = `https://dashboard.tenderly.co/${accountSlug}/${projectSlug}/simulator/new`;
     const params = new URLSearchParams({
         network: chainId.toString(),
@@ -33,3 +36,10 @@ export const getTenderlySimulationUrl = ({
 
     return `${baseUrl}?${params.toString()}`;
 };
+
+export const prepareTransactionsForTenderlySimulation = async (signer: any, txs: any[], chainId: number): Promise<{simulationData: string, signedTx: any}> => {
+        const signedTx = await signer.account.signTransactions(txs, chainId)
+        const simulationData = commons.transaction.encodeBundleExecData(signedTx)
+
+       return {simulationData, signedTx};
+}

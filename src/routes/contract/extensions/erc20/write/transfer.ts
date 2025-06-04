@@ -6,6 +6,7 @@ import { getBlockExplorerUrl } from '../../../../../utils/other';
 import { erc20Abi } from "abitype/abis";
 import { TransactionService } from "../../../../../services/transaction.service";
 import { logRequest, logStep, logError } from '../../../../../utils/loggingUtils';
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../utils/tenderly/getSimulationUrl";
 
 type ERC20TransferRequestBody = {
     to: string;
@@ -21,6 +22,7 @@ type ERC20TransferResponse = {
     result?: {
         txHash: string | null;
         txUrl: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -59,6 +61,7 @@ const ERC20TransferSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -76,6 +79,9 @@ export async function erc20Transfer(fastify: FastifyInstance) {
         schema: ERC20TransferSchema
     }, async (request, reply) => {
         logRequest(request);
+
+        let tenderlyUrl: string | null = null;
+
         try {
             const { to, amount } = request.body;
             const { chainId, contractAddress } = request.params;
@@ -105,6 +111,16 @@ export async function erc20Transfer(fastify: FastifyInstance) {
                 data
             }
 
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                blockIndex: 0,
+                contractAddress: signedTx.entrypoint,
+                rawFunctionInput: simulationData
+            });
+
             const txService = new TransactionService(fastify);
 
             // Create pending transaction first
@@ -122,7 +138,8 @@ export async function erc20Transfer(fastify: FastifyInstance) {
             return reply.code(200).send({
                 result: {
                     txHash: txResponse.hash,
-                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+                    txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+                    txSimulationUrl: tenderlyUrl ?? null
                 }
             });
 
@@ -135,6 +152,7 @@ export async function erc20Transfer(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl ?? null,
                     error: error instanceof Error ? error.message : 'Failed to execute transfer'
                 }
             });

@@ -5,6 +5,8 @@ import { TransactionService } from "../../../services/transaction.service";
 import type { ethers } from "ethers";
 import { getBlockExplorerUrl, getContractAddressFromEvent } from "../../../utils/other";
 import { logError, logRequest, logStep } from "../../../utils/loggingUtils";
+import { getTenderlySimulationUrl } from "../utils/tenderly/getSimulationUrl";
+import { prepareTransactionsForTenderlySimulation } from "../utils/tenderly/getSimulationUrl";
 
 type DeployContractRequestBody = {
     abi: Array<ethers.InterfaceAbi>;
@@ -21,6 +23,7 @@ type DeployContractResponse = {
         txHash: string | null;
         txUrl: string | null;
         deployedContractAddress: string | null;
+        txSimulationUrl?: string | null;
         error?: string;
     };
 }
@@ -60,6 +63,7 @@ const DeployContractSchema = {
                     properties: {
                         txHash: { type: 'string' },
                         txUrl: { type: 'string' },
+                        txSimulationUrl: { type: 'string', nullable: true },
                         error: { type: 'string', nullable: true }
                     }
                 }
@@ -76,6 +80,7 @@ export async function deployContract(fastify: FastifyInstance) {
     }>('/deploy/contract/:chainId', {
         schema: DeployContractSchema
     }, async (request, reply) => {
+        let tenderlyUrl: string | null = null;
         try {
             logRequest(request);
 
@@ -112,6 +117,16 @@ export async function deployContract(fastify: FastifyInstance) {
             })
             logStep(request, 'Deploy transaction sent', { txHash: tx.hash });
 
+            const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+            let tenderlyUrl = getTenderlySimulationUrl({
+                chainId: chainId,
+                gas: 3000000,
+                block: await signer.provider.getBlockNumber(),
+                contractAddress: signedTx.entrypoint,
+                blockIndex: 0,
+                rawFunctionInput: simulationData
+            });
+
             const receipt = await tx.wait();
             logStep(request, 'Deploy transaction mined', { receipt });
 
@@ -138,6 +153,7 @@ export async function deployContract(fastify: FastifyInstance) {
                 result: {
                     txHash: receipt?.hash ?? null,
                     txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+                    txSimulationUrl: tenderlyUrl,
                     deployedContractAddress: deployedContractAddress
                 }
             });
@@ -148,6 +164,7 @@ export async function deployContract(fastify: FastifyInstance) {
                 result: {
                     txHash: null,
                     txUrl: null,
+                    txSimulationUrl: tenderlyUrl,
                     deployedContractAddress: null,
                     error: error instanceof Error ? error.message : 'Failed to deploy contract'
                 }

@@ -6,6 +6,7 @@ import { getBlockExplorerUrl } from "../../../../../../utils/other";
 import { TransactionService } from "../../../../../../services/transaction.service";
 import { erc721ItemsAbi } from "../../../../../../constants/abis/erc721Items";
 import { logRequest, logStep, logError } from '../../../../../../utils/loggingUtils';
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../../utils/tenderly/getSimulationUrl";
 
 type ERC721ItemsMintRequestBody = {
   to: string;
@@ -21,6 +22,7 @@ type ERC721ItemsMintResponse = {
   result?: {
     txHash: string | null;
     txUrl: string | null;
+    txSimulationUrl?: string | null;
     error?: string;
   };
 };
@@ -59,6 +61,7 @@ const ERC721ItemsMintSchema = {
           properties: {
             txHash: { type: 'string' },
             txUrl: { type: 'string' },
+            txSimulationUrl: { type: 'string', nullable: true },
             error: { type: 'string', nullable: true }
           }
         }
@@ -77,6 +80,9 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
     { schema: ERC721ItemsMintSchema },
     async (request, reply) => {
       logRequest(request);
+
+      let tenderlyUrl: string | null = null;
+
       try {
         const { to, amount } = request.body;
         const { chainId, contractAddress } = request.params;
@@ -106,6 +112,16 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
           data
         };
 
+        const {simulationData, signedTx} = await prepareTransactionsForTenderlySimulation(signer, [tx], Number(chainId));
+        let tenderlyUrl = getTenderlySimulationUrl({
+          chainId: chainId,
+          gas: 3000000,
+          block: await signer.provider.getBlockNumber(),
+          blockIndex: 0,
+          contractAddress: signedTx.entrypoint,
+          rawFunctionInput: simulationData
+        });
+
         const txService = new TransactionService(fastify);
 
         const pendingTx = await txService.createPendingTransaction({
@@ -126,7 +142,8 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
         return reply.code(200).send({
           result: {
             txHash: txResponse.hash,
-            txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash)
+            txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+            txSimulationUrl: tenderlyUrl ?? null
           }
         });
       } catch (error) {
@@ -138,6 +155,7 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
           result: {
             txHash: null,
             txUrl: null,
+            txSimulationUrl: tenderlyUrl ?? null,
             error: error instanceof Error ? error.message : 'Failed to mint ERC721Items'
           }
         });
