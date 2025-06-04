@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import { getSigner } from "../../../../../utils/wallet";
+import { getSigner } from "~/utils/wallet";
 import type { TransactionResponse } from "ethers";
 import { ethers } from "ethers";
-import { getBlockExplorerUrl } from '../../../../../utils/other';
-import { erc20Abi } from "../../../../../constants/abis/erc20";
-import { TransactionService } from "../../../../../services/transaction.service";
-import { logRequest, logStep } from "../../../../../utils/loggingUtils";
-import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "../../../utils/tenderly/getSimulationUrl";
+import { getBlockExplorerUrl } from '~/utils/other';
+import { erc20Abi } from "~/constants/abis/erc20";
+import { TransactionService } from "~/services/transaction.service";
+import { logRequest, logStep } from "~/utils/loggingUtils";
+import { getTenderlySimulationUrl, prepareTransactionsForTenderlySimulation } from "~/routes/contract/utils/tenderly/getSimulationUrl";
 
 type ERC20MintRequestBody = {
     to: string;
