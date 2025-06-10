@@ -1,0 +1,47 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "debian-openssl-3.0.x"]
+  output        = "../src/lib/generated/prismaClient"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Transaction {
+  id           String   @id @default(cuid())
+  hash         String?
+  txUrl        String?
+  chainId      Int
+  status       String // 'pending' | 'done' | 'failed'
+  from         String
+  to           String
+  data         String? // Made nullable for pending transactions
+  functionName String?
+  argsJson     String?  @default("[]") // Store args as JSON string
+  isDeployTx   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Contract {
+  id                        Int      @id @default(autoincrement())
+  builderId                 Int?     @unique
+  projectId                 Int?
+  contractName              String
+  contractAddress           String   @unique
+  contractType              String?
+  chainId                   Int
+  source                    String?
+  itemsContractAddress      String?
+  splitterContractAddresses String[] @default([])
+  abi                       String?
+  bytecode                  String
+  bytecode_hash             String?
+  audienceId                Int?
+  symbol                    String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  addedBy                   String   @default("sidekick")
+}

@@ -1,46 +1,57 @@
-import type { FastifyInstance } from "fastify";
-import { indexerClient } from "../../constants/general";
+import type { FastifyInstance } from 'fastify'
+import { indexerClient } from '~/clients/indexerClient'
 
 export type RemoveAllWebhooksResponse = {
-    result?: {
-        status: boolean;
-        error?: string;
-    };
+	result?: {
+		status: boolean
+		error?: string
+	}
 }
 
 const RemoveAllWebhooksSchema = {
-    tags: ['Webhooks'],
-    headers: {
-        type: 'object',
-        properties: {
-            'x-secret-key': { type: 'string' }
-        },
-        required: ['x-secret-key']
-    }
+	tags: ['Webhooks'],
+	headers: {
+		type: 'object',
+		properties: {
+			'x-secret-key': { type: 'string' }
+		},
+		required: ['x-secret-key']
+	}
 }
 
 export async function removeAllWebhooks(fastify: FastifyInstance) {
-    fastify.post<{
-        Reply: RemoveAllWebhooksResponse;
-    }>('/webhook/removeAll', {
-        schema: RemoveAllWebhooksSchema
-    }, async (request, reply) => {
-        try {
-            const response = await indexerClient.removeAllWebhookListeners({})
+	fastify.post<{
+		Reply: RemoveAllWebhooksResponse
+	}>(
+		'/webhook/removeAll',
+		{
+			schema: RemoveAllWebhooksSchema
+		},
+		async (request, reply) => {
+			try {
+				const indexer = indexerClient()
 
-            return reply.code(200).send({
-                result: {
-                    status: response.status
-                }
-            });
-        } catch (error) {
-            request.log.error(error);
-            return reply.code(500).send({
-                result: {
-                    status: false,
-                    error: error instanceof Error ? error.message : 'Failed to remove all webhooks'
-                }
-            });
-        }
-    });
+				if (!indexer) throw new Error('Indexer client not initialized')
+
+				const response = await indexer.removeAllWebhookListeners({})
+
+				return reply.code(200).send({
+					result: {
+						status: response.status
+					}
+				})
+			} catch (error) {
+				request.log.error(error)
+				return reply.code(500).send({
+					result: {
+						status: false,
+						error:
+							error instanceof Error
+								? error.message
+								: 'Failed to remove all webhooks'
+					}
+				})
+			}
+		}
+	)
 }

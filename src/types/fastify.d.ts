@@ -4,9 +4,9 @@ import 'fastify'
 import type { Queue } from 'bull'
 
 declare module 'fastify' {
-  interface FastifyInstance {
-    redis: Redis
-    isRedisHealthy: () => Promise<boolean>
-    rewardQueue: Queue
-  }
-}    
+	interface FastifyInstance {
+		redis: Redis
+		isRedisHealthy: () => Promise<boolean>
+		rewardQueue: Queue
+	}
+}

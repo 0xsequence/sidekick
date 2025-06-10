@@ -1,5 +1,5 @@
 # Use an official Node.js runtime as the base image
-FROM node:18-alpine
+FROM node:24-alpine
 
 # Set the working directory in the container
 WORKDIR /app
@@ -18,9 +18,6 @@ COPY prisma ./prisma/
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Generate Prisma Client
-RUN pnpm prisma generate
-
 # Copy the rest of the application code
 COPY . .
 
@@ -31,11 +28,11 @@ RUN pnpm run build
 RUN chmod +x scripts/start.sh
 
 # Expose the port the app runs on
-EXPOSE 3000
+EXPOSE 7500
 
 # Set environment variables
 ENV HOST=0.0.0.0
-ENV PORT=3000
+ENV PORT=7500
 
 # Command to run the application
 CMD ["/app/scripts/start.sh"]

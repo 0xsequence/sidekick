@@ -5,42 +5,49 @@ Sidekick is a companion service, fully open source,that simplifies blockchain in
 When executing any transaction with Sidekick, the caller will not be the EOA of the PRIVATE KEY you're using for Sidekick, but a Sequence Smart Wallet created for your EOA.
 You can get the address by making a GET request to the `/sidekick/wallet-address` endpoint.
 
-## Setup
+## Run remotely with docker
 
-- Copy `.env.example` to `.env`: `cp .env.example .env`
-- Set up your environment variables in `.env`:
+These commands will get you started with the simplest version of Sidekick. It will allow you to test some of the features like deploying a contract, reading from a contract and executing transactions.
 
-## Using Docker (Recommended)
+```
+docker pull ghcr.io/0xsequence/sidekick:latest
+docker run -e EVM_PRIVATE_KEY=your_private_key_here -p 7500:7500 ghcr.io/0xsequence/sidekick:latest
+```
 
-Quickstart locally with Docker with only one command:
-`pnpm docker:start` (Will start Redis, PostgreSQL, and the server)
-`curl http://127.0.0.1:3000` should return {"status":"ok"}
+## Run locally with Docker Compose
 
-Instructions to stop and restart the sidekick with Docker:
-`pnpm docker:stop` (Will stop all the services)
-`pnpm docker:restart` (Will stop and start all the services)
+You can use the docker-compose.yml to run Sidekick with all the features like Redis, PostgreSQL, Grafana, Prometheus, Blackbox Exporter, etc.
 
-### Run the sidekick without Docker, locally for development:
-1. Install dependencies: `pnpm install`
-2. Generate Prisma client: `pnpm prisma generate`
-3. Create database tables: `pnpm prisma migrate dev`
-4. Start Redis: `pnpm start:redis`
-5. Start the server: `pnpm start`
+```
+cp .env.example .env
+```
 
-Instructions to stop Redis:
-`pnpm stop:redis` (Will stop Redis)
+This will start all the services.
+```
+pnpm docker:start
+```
 
-Instructions to start Redis:
-`pnpm start:redis` (Will start Redis)
+## Dev mode
 
-Instructions to test the sidekick:
-`pnpm run test` (Will run the tests)
-`pnpm run test:watch` (Will run the tests in watch mode)
-`pnpm run test:coverage` (Will run the tests and generate a coverage report)
+You can also run Sidekick locally without docker.
+  
+```
+cp .env.example .env
+```
 
-Instructions to run the sidekick in development mode:
-`pnpm run dev` (Will start the server in development mode)
-`pnpm run dev:withRedis` (Will start the server and Redis in development mode)
+Run without a database
+```
+pnpm install
+pnpm dev:withRedis
+```
+
+Run with a database
+```
+pnpm install
+pnpm prisma generate
+pnpm prisma migrate dev
+pnpm dev:withRedis
+```
 
 ## Analytics & Monitoring 📊
 
@@ -78,14 +85,20 @@ Sidekick provides several tools for monitoring, metrics, and alerting. Here's wh
 
 Sidekick provides a DEBUG mode that will give you detailed logs so you can see what's happening under the hood, add DEBUG="true" as an environment variable to your .env file to turn it on.
 
+```
+DEBUG=true
+```
+
 ### Tenderly 🔍
 
 Sidekick is integrated with Tenderly, you can use it to simulate transactions, deployments, or get a transaction simulation URL and debug directly from the Tenderly UI with just one click. For the best results, we recommend that your contracts are verified.
 To use Tenderly, you need to add the following environment variables to your .env file:
 
+```
 TENDERLY_ACCESS_KEY=...
 TENDERLY_ACCOUNT_SLUG=..
 TENDERLY_PROJECT_SLUG=..
+```
 
 ### Contract Verification ✅
 
@@ -98,15 +111,9 @@ For now, this only works for the following contracts:
 
 To turn automatic verification on you need the following environment variables:
 
-VERIFY_CONTRACT_ON_DEPLOY=true
-ETHERSCAN_API_KEY=...
-
-### Public Docker Image on Github Container Registry 🐳
-
-You can pull the latest version of Sidekick from the Github Container Registry:
-
 ```
-docker pull ghcr.io/0xsequence/sidekick:latest
+VERIFY_CONTRACT_ON_DEPLOY=true
+ETHERSCAN_API_KEY=..  .
 ```
 
 Verification for other contract templates will be added soon.
