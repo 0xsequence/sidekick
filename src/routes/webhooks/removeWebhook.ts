@@ -4,6 +4,7 @@ import { indexerClient } from '~/clients/indexerClient'
 // Types for request/response
 type RemoveWebhookRequestBody = {
 	webhookId: string
+	indexerUrl: string
 }
 
 export type RemoveWebhookResponse = {
@@ -25,9 +26,10 @@ const RemoveWebhookSchema = {
 	body: {
 		type: 'object',
 		properties: {
-			webhookId: { type: 'string' }
+			webhookId: { type: 'string' },
+			indexerUrl: { type: 'string' }
 		},
-		required: ['webhookId']
+		required: ['webhookId', 'indexerUrl']
 	}
 }
 
@@ -42,9 +44,9 @@ export async function removeWebhook(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			try {
-				const { webhookId } = request.body
+				const { webhookId, indexerUrl } = request.body
 
-				const indexer = indexerClient()
+				const indexer = indexerClient(indexerUrl)
 
 				if (!indexer) throw new Error('Indexer client not initialized')
 

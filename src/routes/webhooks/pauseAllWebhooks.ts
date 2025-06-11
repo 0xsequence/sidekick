@@ -8,8 +8,19 @@ export type PauseAllWebhooksResponse = {
 	}
 }
 
+type PauseAllWebhooksRequestBody = {
+	indexerUrl: string
+}
+
 const PauseAllWebhooksSchema = {
 	tags: ['Webhooks'],
+	body: {
+		type: 'object',
+		properties: {
+			indexerUrl: { type: 'string' }
+		},
+		required: ['indexerUrl']
+	},
 	headers: {
 		type: 'object',
 		properties: {
@@ -22,6 +33,9 @@ const PauseAllWebhooksSchema = {
 export async function pauseAllWebhooks(fastify: FastifyInstance) {
 	fastify.post<{
 		Reply: PauseAllWebhooksResponse
+		Body: {
+			indexerUrl: string
+		}
 	}>(
 		'/webhook/pauseAll',
 		{
@@ -29,7 +43,9 @@ export async function pauseAllWebhooks(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			try {
-				const indexer = indexerClient()
+				const { indexerUrl } = request.body
+
+				const indexer = indexerClient(indexerUrl)
 
 				if (!indexer) throw new Error('Indexer client not initialized')
 

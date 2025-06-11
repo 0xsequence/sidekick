@@ -60,10 +60,7 @@ if (process.env.DATABASE_URL) {
 await fastify.register(swagger)
 
 // Register Redis plugin
-if (
-	process.env.REDIS_HOST &&
-	process.env.REDIS_PORT 
-) {
+if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
 	fastify.register(FastifyRedis, {
 		host: process.env.REDIS_HOST || 'localhost',
 		port: Number(process.env.REDIS_PORT) || 6379,

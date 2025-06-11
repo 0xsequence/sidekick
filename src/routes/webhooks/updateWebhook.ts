@@ -18,6 +18,7 @@ type UpdateWebhookRequestBody = {
 	name: string
 	active: boolean
 	projectID: number
+	indexerUrl: string
 }
 
 const UpdateWebhookSchema = {
@@ -62,10 +63,10 @@ export async function updateWebhook(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			try {
-				const { webhookId, url, filters, name, active, projectID } =
+				const { webhookId, url, filters, name, active, projectID, indexerUrl } =
 					request.body
 
-				const indexer = indexerClient()
+				const indexer = indexerClient(indexerUrl)
 
 				if (!indexer) throw new Error('Indexer client not initialized')
 

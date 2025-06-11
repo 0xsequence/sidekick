@@ -1,5 +1,5 @@
-import type { PrismaClient } from '~/lib/generated/prismaClient'
 import fp from 'fastify-plugin'
+import type { PrismaClient } from '~/lib/generated/prismaClient'
 import { prismaClient } from '~/lib/prisma'
 
 declare module 'fastify' {

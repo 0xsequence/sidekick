@@ -11,8 +11,19 @@ export type GetAllWebhooksResponse = {
 	}
 }
 
+type GetAllWebhooksRequestBody = {
+	indexerUrl: string
+}
+
 const GetAllWebhooksSchema = {
 	tags: ['Webhooks'],
+	querystring: {
+		type: 'object',
+		properties: {
+			indexerUrl: { type: 'string' }
+		},
+		required: ['indexerUrl']
+	},
 	response: {
 		200: {
 			type: 'object',
@@ -28,12 +39,15 @@ const GetAllWebhooksSchema = {
 export async function getAllWebhooks(fastify: FastifyInstance) {
 	fastify.get<{
 		Reply: GetAllWebhooksResponse
+		Querystring: GetAllWebhooksRequestBody
 	}>(
 		'/webhook/getAll',
 		{ schema: GetAllWebhooksSchema },
 		async (request, reply) => {
 			try {
-				const indexer = indexerClient()
+				const { indexerUrl } = request.query
+
+				const indexer = indexerClient(indexerUrl)
 
 				if (!indexer) throw new Error('Indexer client not initialized')
 

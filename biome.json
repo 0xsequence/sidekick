@@ -7,7 +7,12 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": ["pnpm-lock.yaml", "node_modules", "package.json"]
+		"ignore": [
+			"pnpm-lock.yaml",
+			"node_modules",
+			"package.json",
+			"src/lib/generated"
+		]
 	},
 	"formatter": {
 		"enabled": true,

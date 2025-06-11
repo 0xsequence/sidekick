@@ -7,6 +7,7 @@ type AddWebhookRequestBody = {
 	url: string
 	events: string[]
 	contractAddresses: string[]
+	indexerUrl: string
 }
 
 export type AddWebhookResponse = {
@@ -33,7 +34,8 @@ const AddWebhookSchema = {
 		properties: {
 			url: { type: 'string' },
 			events: { type: 'array', items: { type: 'string' } },
-			contractAddresses: { type: 'array', items: { type: 'string' } }
+			contractAddresses: { type: 'array', items: { type: 'string' } },
+			indexerUrl: { type: 'string' }
 		},
 		required: ['url', 'events', 'contractAddresses']
 	},
@@ -90,9 +92,9 @@ export async function addWebhook(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			try {
-				const { url, events, contractAddresses } = request.body
+				const { url, events, contractAddresses, indexerUrl } = request.body
 
-				const indexer = indexerClient()
+				const indexer = indexerClient(indexerUrl)
 
 				if (!indexer) throw new Error('Indexer client not initialized')
 

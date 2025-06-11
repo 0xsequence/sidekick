@@ -13,6 +13,7 @@ export type ToggleWebhookResponse = {
 
 type ToggleWebhookRequestBody = {
 	webhookId: string
+	indexerUrl: string
 }
 
 const ToggleWebhookSchema = {
@@ -27,9 +28,10 @@ const ToggleWebhookSchema = {
 	body: {
 		type: 'object',
 		properties: {
-			webhookId: { type: 'string' }
+			webhookId: { type: 'string' },
+			indexerUrl: { type: 'string' }
 		},
-		required: ['webhookId']
+		required: ['webhookId', 'indexerUrl']
 	}
 }
 
@@ -44,9 +46,9 @@ export async function resumeAllWebhooks(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			try {
-				const { webhookId } = request.body
+				const { webhookId, indexerUrl } = request.body
 
-				const indexer = indexerClient()
+				const indexer = indexerClient(indexerUrl)
 
 				if (!indexer) throw new Error('Indexer client not initialized')
 

@@ -1,7 +1,7 @@
-import type { Contract } from '~/lib/generated/prismaClient'
 import { Type } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
 import { PRISMA_NOT_INITIALIZED } from '~/constants/errors'
+import type { Contract } from '~/lib/generated/prismaClient'
 import { ContractSchema } from '~/schemas/contractSchemas'
 
 type GetContractResponse = {

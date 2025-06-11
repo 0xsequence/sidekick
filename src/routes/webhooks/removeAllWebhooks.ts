@@ -8,8 +8,19 @@ export type RemoveAllWebhooksResponse = {
 	}
 }
 
+type RemoveAllWebhooksRequestBody = {
+	indexerUrl: string
+}
+
 const RemoveAllWebhooksSchema = {
 	tags: ['Webhooks'],
+	body: {
+		type: 'object',
+		properties: {
+			indexerUrl: { type: 'string' }
+		},
+		required: ['indexerUrl']
+	},
 	headers: {
 		type: 'object',
 		properties: {
@@ -22,6 +33,7 @@ const RemoveAllWebhooksSchema = {
 export async function removeAllWebhooks(fastify: FastifyInstance) {
 	fastify.post<{
 		Reply: RemoveAllWebhooksResponse
+		Body: RemoveAllWebhooksRequestBody
 	}>(
 		'/webhook/removeAll',
 		{
@@ -29,7 +41,9 @@ export async function removeAllWebhooks(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			try {
-				const indexer = indexerClient()
+				const { indexerUrl } = request.body
+
+				const indexer = indexerClient(indexerUrl)
 
 				if (!indexer) throw new Error('Indexer client not initialized')
 

@@ -1,8 +1,8 @@
-import type { Transaction } from '~/lib/generated/prismaClient'
 import type { TransactionResponse } from 'ethers'
 import type { FastifyInstance } from 'fastify'
 import { encodeFunctionData } from 'viem'
 import { PRISMA_NOT_INITIALIZED } from '~/constants/errors'
+import type { Transaction } from '~/lib/generated/prismaClient'
 import { getSigner } from '../utils/wallet'
 
 export class TransactionService {

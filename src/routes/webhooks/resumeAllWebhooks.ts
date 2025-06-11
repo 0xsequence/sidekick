@@ -8,8 +8,19 @@ export type ResumeAllWebhooksResponse = {
 	}
 }
 
+type ResumeAllWebhooksRequestBody = {
+	indexerUrl: string
+}
+
 const ResumeAllWebhooksSchema = {
 	tags: ['Webhooks'],
+	body: {
+		type: 'object',
+		properties: {
+			indexerUrl: { type: 'string' }
+		},
+		required: ['indexerUrl']
+	},
 	headers: {
 		type: 'object',
 		properties: {
@@ -22,6 +33,7 @@ const ResumeAllWebhooksSchema = {
 export async function resumeAllWebhooks(fastify: FastifyInstance) {
 	fastify.post<{
 		Reply: ResumeAllWebhooksResponse
+		Body: ResumeAllWebhooksRequestBody
 	}>(
 		'/webhook/resumeAll',
 		{
@@ -29,7 +41,9 @@ export async function resumeAllWebhooks(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			try {
-				const indexer = indexerClient()
+				const { indexerUrl } = request.body
+
+				const indexer = indexerClient(indexerUrl)
 
 				if (!indexer) throw new Error('Indexer client not initialized')
 
