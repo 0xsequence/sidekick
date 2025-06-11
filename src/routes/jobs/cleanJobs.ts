@@ -6,9 +6,8 @@ const CleanJobsSchema = {
 	tags: ['Jobs'],
 	headers: {
 		type: 'object',
-		required: ['x-secret-key'],
 		properties: {
-			'x-secret-key': { type: 'string' }
+			'x-secret-key': { type: 'string', nullable: true }
 		}
 	}
 }

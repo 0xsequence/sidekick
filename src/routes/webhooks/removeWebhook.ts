@@ -19,9 +19,8 @@ const RemoveWebhookSchema = {
 	headers: {
 		type: 'object',
 		properties: {
-			'x-secret-key': { type: 'string' }
-		},
-		required: ['x-secret-key']
+			'x-secret-key': { type: 'string', nullable: true }
+		}
 	},
 	body: {
 		type: 'object',
