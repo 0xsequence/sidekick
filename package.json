@@ -19,7 +19,8 @@
     "stop:redis": "redis-server stop",
     "start:redis": "redis-server --daemonize yes",
     "lint": "biome check .",
-    "lint:fix": "biome check . --write"
+    "lint:fix": "biome check . --write",
+    "tag:release": "sh ./scripts/tag-release.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",

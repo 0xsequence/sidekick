@@ -13,10 +13,28 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log into Github registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - name: Docker build and push
-        run: |
-          docker build --build-arg VERSION=${GITHUB_REF##*/} -t ghcr.io/0xsequence/sidekick:${GITHUB_REF##*/} -t ghcr.io/0xsequence/sidekick:latest .
-          docker push ghcr.io/0xsequence/sidekick:${GITHUB_REF##*/}
-          docker push ghcr.io/0xsequence/sidekick:latest
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/0xsequence/sidekick:${{ github.ref_name }}
+            ghcr.io/0xsequence/sidekick:latest
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ github.ref_name }}
