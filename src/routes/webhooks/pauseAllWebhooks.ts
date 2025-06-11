@@ -1,46 +1,72 @@
-import type { FastifyInstance } from "fastify";
-import { indexerClient } from "../../constants/general";
+import type { FastifyInstance } from 'fastify'
+import { indexerClient } from '~/clients/indexerClient'
 
 export type PauseAllWebhooksResponse = {
-    result?: {
-        status: boolean;
-        error?: string;
-    };
+	result?: {
+		status: boolean
+		error?: string
+	}
+}
+
+type PauseAllWebhooksRequestBody = {
+	indexerUrl: string
 }
 
 const PauseAllWebhooksSchema = {
-    tags: ['Webhooks'],
-    headers: {
-        type: 'object',
-        properties: {
-            'x-secret-key': { type: 'string' }
-        },
-        required: ['x-secret-key']
-    }
+	tags: ['Webhooks'],
+	body: {
+		type: 'object',
+		properties: {
+			indexerUrl: { type: 'string' }
+		},
+		required: ['indexerUrl']
+	},
+	headers: {
+		type: 'object',
+		properties: {
+			'x-secret-key': { type: 'string', nullable: true }
+		}
+	}
 }
 
 export async function pauseAllWebhooks(fastify: FastifyInstance) {
-    fastify.post<{
-        Reply: PauseAllWebhooksResponse;
-    }>('/webhook/pauseAll', {
-        schema: PauseAllWebhooksSchema
-    }, async (request, reply) => {
-        try {
-            const response = await indexerClient.pauseAllWebhookListeners({})
+	fastify.post<{
+		Reply: PauseAllWebhooksResponse
+		Body: {
+			indexerUrl: string
+		}
+	}>(
+		'/webhook/pauseAll',
+		{
+			schema: PauseAllWebhooksSchema
+		},
+		async (request, reply) => {
+			try {
+				const { indexerUrl } = request.body
 
-            return reply.code(200).send({
-                result: {
-                    status: response.status
-                }
-            });
-        } catch (error) {
-            request.log.error(error);
-            return reply.code(500).send({
-                result: {
-                    status: false,
-                    error: error instanceof Error ? error.message : 'Failed to pause all webhooks'
-                }
-            });
-        }
-    });
+				const indexer = indexerClient(indexerUrl)
+
+				if (!indexer) throw new Error('Indexer client not initialized')
+
+				const response = await indexer.pauseAllWebhookListeners({})
+
+				return reply.code(200).send({
+					result: {
+						status: response.status
+					}
+				})
+			} catch (error) {
+				request.log.error(error)
+				return reply.code(500).send({
+					result: {
+						status: false,
+						error:
+							error instanceof Error
+								? error.message
+								: 'Failed to pause all webhooks'
+					}
+				})
+			}
+		}
+	)
 }
