@@ -5,12 +5,11 @@ Sidekick is a companion service, fully open source,that simplifies blockchain in
 When executing any transaction with Sidekick, the caller will not be the EOA of the PRIVATE KEY you're using for Sidekick, but a Sequence Smart Wallet created for your EOA.
 You can get the address by making a GET request to the `/sidekick/wallet-address` endpoint.
 
-## Run remotely with docker
+## Run with Docker from GitHub Container Registry
 
 These commands will get you started with the simplest version of Sidekick. It will allow you to test some of the features like deploying a contract, reading from a contract and executing transactions.
 
 ```
-docker pull ghcr.io/0xsequence/sidekick:latest
 docker run -e EVM_PRIVATE_KEY=your_private_key_here -p 7500:7500 ghcr.io/0xsequence/sidekick:latest
 ```
 
@@ -35,17 +34,8 @@ You can also run Sidekick locally without docker.
 cp .env.example .env
 ```
 
-Run without a database
 ```
 pnpm install
-pnpm dev:withRedis
-```
-
-Run with a database
-```
-pnpm install
-pnpm prisma generate
-pnpm prisma migrate dev
 pnpm dev:withRedis
 ```
 
