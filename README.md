@@ -53,7 +53,7 @@ Sidekick provides several tools for monitoring, metrics, and alerting. Here's wh
 
 ### Metrics Endpoint (Prometheus Scrape Target)
 - **Purpose:** Exposes Prometheus-compatible metrics for Sidekick.
-- **Access:** [http://localhost:3000/metrics](http://localhost:3000/metrics)
+- **Access:** [http://localhost:7500/metrics](http://localhost:7500/metrics)
 - **Note:** This endpoint is scraped by Prometheus (see `monitoring/prometheus/prometheus.yml` for config).
 
 ### Prometheus
