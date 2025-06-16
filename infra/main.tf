@@ -27,7 +27,7 @@ resource "aws_eip" "nat" {
   }
 }
 
-# Public Subnet for NAT Gateway (must be in same AZ as your NAT)
+# Public Subnet for NAT Gateway
 resource "aws_subnet" "sidekick_public_subnet" {
   vpc_id                  = aws_vpc.sidekick_vpc.id
   cidr_block              = "10.0.3.0/24"
@@ -43,7 +43,7 @@ resource "aws_subnet" "sidekick_public_subnet_2" {
   map_public_ip_on_launch = true
 }
 
-# NAT Gateway (after EIP and public subnet)
+# NAT Gateway
 resource "aws_nat_gateway" "sidekick_nat" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.sidekick_public_subnet.id
@@ -134,15 +134,15 @@ resource "aws_service_discovery_private_dns_namespace" "sidekick" {
 
 # Elastic Cache SG
 resource "aws_security_group" "redis_sg" {
-  name        = "sidekick-redis-sg" # Firewall identifier
+  name        = "sidekick-redis-sg"
   description = "Security group for Sidekick Redis"
-  vpc_id      = aws_vpc.sidekick_vpc.id # Associates with your VPC
+  vpc_id      = aws_vpc.sidekick_vpc.id
 
-  ingress {                                         # Inbound rule:
-    from_port   = 6379                              # - Redis port
-    to_port     = 6379                              # - 
-    protocol    = "tcp"                             # - TCP protocol only
-    cidr_blocks = [aws_vpc.sidekick_vpc.cidr_block] # - Only from within VPC
+  ingress {
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.sidekick_vpc.cidr_block]
   }
 
   egress {
@@ -179,8 +179,6 @@ resource "aws_security_group" "ecs_service_sg" {
   name        = "sidekick-ecs-service-sg"
   description = "Security group for Sidekick ECS service"
   vpc_id      = aws_vpc.sidekick_vpc.id
-
-  # Only allow traffic from ALB on port 7500
   ingress {
     from_port       = 7500
     to_port         = 7500
@@ -188,7 +186,6 @@ resource "aws_security_group" "ecs_service_sg" {
     security_groups = [aws_security_group.alb_sg.id]
   }
 
-  # Allow ALL outbound traffic (NAT Gateway will handle routing)
   egress {
     from_port   = 0
     to_port     = 0
@@ -203,22 +200,20 @@ resource "aws_security_group" "alb_sg" {
   description = "Security group for Sidekick ALB"
   vpc_id      = aws_vpc.sidekick_vpc.id
 
-  # Allow HTTP/HTTPS from anywhere (or restrict to specific IPs)
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Restrict this to Pragma's IPs if known
+    cidr_blocks = ["0.0.0.0/0"] # Restrict to Pragma's IPs
   }
 
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Restrict this to Pragma's IPs if known
+    cidr_blocks = ["0.0.0.0/0"] # Restrict to Pragma's IPs 
   }
 
-  # Allow all outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -288,34 +283,34 @@ resource "aws_lb" "sidekick_alb" {
   }
 }
 
-# resource "aws_lb_target_group" "sidekick_tg" {
-#   name        = "sidekick-tg"
-#   port        = 7500
-#   protocol    = "HTTP"
-#   target_type = "ip"
-#   vpc_id      = aws_vpc.sidekick_vpc.id
+resource "aws_lb_target_group" "sidekick_tg" {
+  name        = "sidekick-tg"
+  port        = 7500
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = aws_vpc.sidekick_vpc.id
 
-#   health_check {
-#     healthy_threshold   = 2
-#     unhealthy_threshold = 2
-#     timeout             = 5
-#     interval            = 10
-#     path                = "/"
-#     matcher             = "200-399"
-#   }
-# }
+  health_check {
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 10
+    path                = "/"
+    matcher             = "200-399"
+  }
+}
 
 # Listener (HTTP)
-# resource "aws_lb_listener" "sidekick_http" {
-#   load_balancer_arn = aws_lb.sidekick_alb.arn
-#   port              = "80"
-#   protocol          = "HTTP"
+resource "aws_lb_listener" "sidekick_http" {
+  load_balancer_arn = aws_lb.sidekick_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
 
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.sidekick_tg.arn
-#   }
-# }
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.sidekick_tg.arn
+  }
+}
 
 # # Redis ElastiCache Cluster *****************************************************************
 resource "aws_elasticache_replication_group" "sidekick_redis" {
@@ -552,34 +547,6 @@ resource "aws_ecs_task_definition" "sidekick_task" {
 }
 
 
-# Allow ECS to access RDS and Redis
-# resource "aws_security_group_rule" "ecs_to_rds" {
-#   type                     = "egress"
-#   from_port                = 5432
-#   to_port                  = 5432
-#   protocol                 = "tcp"
-#   security_group_id        = aws_security_group.ecs_service_sg.id
-#   source_security_group_id = aws_security_group.postgres_sg.id
-# }
-
-# resource "aws_security_group_rule" "ecs_to_redis" {
-#   type                     = "egress"
-#   from_port                = 6379
-#   to_port                  = 6379
-#   protocol                 = "tcp"
-#   security_group_id        = aws_security_group.ecs_service_sg.id
-#   source_security_group_id = aws_security_group.redis_sg.id
-# }
-
-# resource "aws_security_group_rule" "redis_from_ecs" {
-#   type                     = "ingress"
-#   from_port                = 6379
-#   to_port                  = 6379
-#   protocol                 = "tcp"
-#   security_group_id        = aws_security_group.redis_sg.id
-#   source_security_group_id = aws_security_group.ecs_service_sg.id
-# }
-
 # ECS Service
 resource "aws_ecs_service" "sidekick_service" {
   name            = "sidekick-service"
@@ -593,12 +560,6 @@ resource "aws_ecs_service" "sidekick_service" {
     security_groups  = [aws_security_group.ecs_service_sg.id]
     assign_public_ip = false
   }
-
-  # load_balancer {
-  #   target_group_arn = aws_lb_target_group.sidekick_tg.arn
-  #   container_name   = "sidekick-container"
-  #   container_port   = 7500
-  # }
 
   depends_on = [
     # aws_lb_listener.sidekick_http,
