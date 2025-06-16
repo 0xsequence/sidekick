@@ -1,3 +1,4 @@
+# !! I will modulate this soon !!
 terraform {
   required_providers {
     aws = {
@@ -143,6 +144,13 @@ resource "aws_security_group" "redis_sg" {
     protocol    = "tcp"                             # - TCP protocol only
     cidr_blocks = [aws_vpc.sidekick_vpc.cidr_block] # - Only from within VPC
   }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 # Postgres SG
@@ -156,6 +164,13 @@ resource "aws_security_group" "postgres_sg" {
     to_port     = 5432
     protocol    = "tcp"
     cidr_blocks = [aws_vpc.sidekick_vpc.cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -273,34 +288,34 @@ resource "aws_lb" "sidekick_alb" {
   }
 }
 
-resource "aws_lb_target_group" "sidekick_tg" {
-  name        = "sidekick-tg"
-  port        = 7500
-  protocol    = "HTTP"
-  target_type = "ip"
-  vpc_id      = aws_vpc.sidekick_vpc.id
+# resource "aws_lb_target_group" "sidekick_tg" {
+#   name        = "sidekick-tg"
+#   port        = 7500
+#   protocol    = "HTTP"
+#   target_type = "ip"
+#   vpc_id      = aws_vpc.sidekick_vpc.id
 
-  health_check {
-    path                = "/health" # Update with your health check endpoint
-    interval            = 30
-    timeout             = 10
-    healthy_threshold   = 3
-    unhealthy_threshold = 3
-    matcher             = "200-399"
-  }
-}
+#   health_check {
+#     healthy_threshold   = 2
+#     unhealthy_threshold = 2
+#     timeout             = 5
+#     interval            = 10
+#     path                = "/"
+#     matcher             = "200-399"
+#   }
+# }
 
 # Listener (HTTP)
-resource "aws_lb_listener" "sidekick_http" {
-  load_balancer_arn = aws_lb.sidekick_alb.arn
-  port              = "80"
-  protocol          = "HTTP"
+# resource "aws_lb_listener" "sidekick_http" {
+#   load_balancer_arn = aws_lb.sidekick_alb.arn
+#   port              = "80"
+#   protocol          = "HTTP"
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.sidekick_tg.arn
-  }
-}
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.sidekick_tg.arn
+#   }
+# }
 
 # # Redis ElastiCache Cluster *****************************************************************
 resource "aws_elasticache_replication_group" "sidekick_redis" {
@@ -416,6 +431,16 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy_attachment" "elasticahe_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonElastiCacheFullAccess"
+  role       = aws_iam_role.ecs_task_execution_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "docdb_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDocDBFullAccess"
+  role       = aws_iam_role.ecs_task_execution_role.name
+}
+
 # Additional policy for Secrets Manager access
 resource "aws_iam_policy" "secrets_manager_access" {
   name        = "sidekick-secrets-manager-access"
@@ -511,7 +536,7 @@ resource "aws_ecs_task_definition" "sidekick_task" {
       { name = "DEBUG", value = "false" },
       { name = "DATABASE_URL", value = "postgresql://${jsondecode(data.aws_secretsmanager_secret_version.postgres_credentials.secret_string)["username"]}:${jsondecode(data.aws_secretsmanager_secret_version.postgres_credentials.secret_string)["password"]}@${aws_db_instance.sidekick_postgres.endpoint}/sequence_sidekick?schema=public" },
       { name = "REDIS_HOST", value = aws_elasticache_replication_group.sidekick_redis.primary_endpoint_address },
-      { name = "REDIS_PORT", value = "6379" },
+      { name = "REDIS_PORT", value = tostring(aws_elasticache_replication_group.sidekick_redis.port) },
       { name = "REDIS_PASSWORD", value = jsondecode(data.aws_secretsmanager_secret_version.redis_credentials.secret_string)["auth_token"] },
       { name = "SEQUENCE_PROJECT_ACCESS_KEY", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["SEQUENCE_PROJECT_ACCESS_KEY"] },
       { name = "EVM_PRIVATE_KEY", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["EVM_PRIVATE_KEY"] },
@@ -528,23 +553,32 @@ resource "aws_ecs_task_definition" "sidekick_task" {
 
 
 # Allow ECS to access RDS and Redis
-resource "aws_security_group_rule" "ecs_to_rds" {
-  type                     = "egress"
-  from_port                = 5432
-  to_port                  = 5432
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.ecs_service_sg.id
-  source_security_group_id = aws_security_group.postgres_sg.id
-}
+# resource "aws_security_group_rule" "ecs_to_rds" {
+#   type                     = "egress"
+#   from_port                = 5432
+#   to_port                  = 5432
+#   protocol                 = "tcp"
+#   security_group_id        = aws_security_group.ecs_service_sg.id
+#   source_security_group_id = aws_security_group.postgres_sg.id
+# }
 
-resource "aws_security_group_rule" "ecs_to_redis" {
-  type                     = "egress"
-  from_port                = 6379
-  to_port                  = 6379
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.ecs_service_sg.id
-  source_security_group_id = aws_security_group.redis_sg.id
-}
+# resource "aws_security_group_rule" "ecs_to_redis" {
+#   type                     = "egress"
+#   from_port                = 6379
+#   to_port                  = 6379
+#   protocol                 = "tcp"
+#   security_group_id        = aws_security_group.ecs_service_sg.id
+#   source_security_group_id = aws_security_group.redis_sg.id
+# }
+
+# resource "aws_security_group_rule" "redis_from_ecs" {
+#   type                     = "ingress"
+#   from_port                = 6379
+#   to_port                  = 6379
+#   protocol                 = "tcp"
+#   security_group_id        = aws_security_group.redis_sg.id
+#   source_security_group_id = aws_security_group.ecs_service_sg.id
+# }
 
 # ECS Service
 resource "aws_ecs_service" "sidekick_service" {
@@ -560,14 +594,14 @@ resource "aws_ecs_service" "sidekick_service" {
     assign_public_ip = false
   }
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.sidekick_tg.arn
-    container_name   = "sidekick-container"
-    container_port   = 7500
-  }
+  # load_balancer {
+  #   target_group_arn = aws_lb_target_group.sidekick_tg.arn
+  #   container_name   = "sidekick-container"
+  #   container_port   = 7500
+  # }
 
   depends_on = [
-    aws_lb_listener.sidekick_http,
+    # aws_lb_listener.sidekick_http,
     aws_db_instance.sidekick_postgres,
     aws_elasticache_replication_group.sidekick_redis
   ]
@@ -579,8 +613,12 @@ resource "aws_ecs_service" "sidekick_service" {
 }
 
 # OUTPUTS ************************************************************************
-output "redis_endpoint" {
-  value = aws_elasticache_replication_group.sidekick_redis.primary_endpoint_address
+output "redis_config" {
+  value = {
+    endpoint = aws_elasticache_replication_group.sidekick_redis.primary_endpoint_address
+    port     = aws_elasticache_replication_group.sidekick_redis.port
+    sg_id    = aws_security_group.redis_sg.id
+  }
 }
 
 output "postgres_endpoint" {
