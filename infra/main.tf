@@ -323,8 +323,8 @@ resource "aws_elasticache_replication_group" "sidekick_redis" {
   parameter_group_name       = "default.redis7"
   automatic_failover_enabled = true
   at_rest_encryption_enabled = true
-  transit_encryption_enabled = true
-  auth_token                 = jsondecode(data.aws_secretsmanager_secret_version.redis_credentials.secret_string)["auth_token"]
+  transit_encryption_enabled = false
+  # auth_token                 = jsondecode(data.aws_secretsmanager_secret_version.redis_credentials.secret_string)["auth_token"]
 
   subnet_group_name  = aws_elasticache_subnet_group.sidekick_redis.name
   security_group_ids = [aws_security_group.redis_sg.id]
@@ -532,7 +532,7 @@ resource "aws_ecs_task_definition" "sidekick_task" {
       { name = "DATABASE_URL", value = "postgresql://${jsondecode(data.aws_secretsmanager_secret_version.postgres_credentials.secret_string)["username"]}:${jsondecode(data.aws_secretsmanager_secret_version.postgres_credentials.secret_string)["password"]}@${aws_db_instance.sidekick_postgres.endpoint}/sequence_sidekick?schema=public" },
       { name = "REDIS_HOST", value = aws_elasticache_replication_group.sidekick_redis.primary_endpoint_address },
       { name = "REDIS_PORT", value = tostring(aws_elasticache_replication_group.sidekick_redis.port) },
-      { name = "REDIS_PASSWORD", value = jsondecode(data.aws_secretsmanager_secret_version.redis_credentials.secret_string)["auth_token"] },
+      # { name = "REDIS_PASSWORD", value = jsondecode(data.aws_secretsmanager_secret_version.redis_credentials.secret_string)["auth_token"] },
       { name = "SEQUENCE_PROJECT_ACCESS_KEY", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["SEQUENCE_PROJECT_ACCESS_KEY"] },
       { name = "EVM_PRIVATE_KEY", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["EVM_PRIVATE_KEY"] },
       { name = "AWS_ACCESS_KEY_ID", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["AWS_ACCESS_KEY_ID"] },
