@@ -1,0 +1,13 @@
+# ElasticCache Variables
+variable "elastic_cache_id" {}
+variable "elastic_cache_engine" {}
+variable "elastic_cache_version" {}
+variable "elastic_cache_node_type" {}
+variable "elastic_cache_port" {}
+variable "elastic_cache_failover_enabled" {}
+variable "elastic_cache_rest_encryption_enabled" {}
+variable "elastic_cache_transit_encryption_Enabled" {}
+variable "elastic_cache_sg" {}
+variable "elastic_cache_security_group" {}
+variable "elastic_cache_num_nodes" {}
+variable "elastic_cache_replicas_node" {}

@@ -1,0 +1,10 @@
+output "vpc_id" { value = aws_vpc.sidekick_vpc.id }
+output "private_subnet_id_1" { value = aws_subnet.sidekick_private_subnet_1.id }
+output "private_subnet_id_2" { value = aws_subnet.sidekick_private_subnet_2.id }
+output "vpc_cidr" { value = aws_vpc.sidekick_vpc.cidr_block }
+output "alb_subnet_1" { value = aws_subnet.alb_subnet_1.id }
+output "alb_subnet_2" { value = aws_subnet.alb_subnet_2.id }
+output "redis_subnet_group_id" { value = aws_elasticache_subnet_group.sidekick_redis.id }
+output "redis_subnet_group_name" { value = aws_elasticache_subnet_group.sidekick_redis.name }
+output "postgres_subnet_group_id" { value = aws_db_subnet_group.sidekick_postgres.id }
+output "postgres_subnet_group_name" { value = aws_db_subnet_group.sidekick_postgres.name }
