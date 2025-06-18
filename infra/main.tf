@@ -16,67 +16,7 @@ provider "aws" {
 
 # Network *****************************************************************
 
-resource "aws_internet_gateway" "sidekick_igw" {
-  vpc_id = aws_vpc.sidekick_vpc.id
-}
-
-# Elastic IP for NAT Gateway
-resource "aws_eip" "nat" {
-  tags = {
-    Name = "sidekick-nat-eip"
-  }
-}
-
-# Public Subnet for NAT Gateway
-resource "aws_subnet" "sidekick_public_subnet" {
-  vpc_id                  = aws_vpc.sidekick_vpc.id
-  cidr_block              = "10.0.3.0/24"
-  availability_zone       = "us-west-2a"
-  map_public_ip_on_launch = true
-}
-
-# Second Public Subnet in a different AZ
-resource "aws_subnet" "sidekick_public_subnet_2" {
-  vpc_id                  = aws_vpc.sidekick_vpc.id
-  cidr_block              = "10.0.4.0/24"
-  availability_zone       = "us-west-2b"
-  map_public_ip_on_launch = true
-}
-
-# NAT Gateway
-resource "aws_nat_gateway" "sidekick_nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.sidekick_public_subnet.id
-  # Explicit dependencies
-  depends_on = [aws_internet_gateway.sidekick_igw]
-}
-
-# Route Tables
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.sidekick_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.sidekick_igw.id
-  }
-}
-
-
-resource "aws_route_table_association" "public_2" {
-  subnet_id      = aws_subnet.sidekick_public_subnet_2.id
-  route_table_id = aws_route_table.public.id
-}
-
-# Private Route Table
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.sidekick_vpc.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.sidekick_nat.id
-  }
-}
-
+# Private VPC and Networking
 resource "aws_vpc" "sidekick_vpc" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -95,11 +35,69 @@ resource "aws_subnet" "sidekick_private_subnet_2" {
   availability_zone = "us-west-2b"
 }
 
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.sidekick_public_subnet.id
+# For ALB (will be private after VPC peering)
+resource "aws_subnet" "alb_subnet_1" {
+  vpc_id            = aws_vpc.sidekick_vpc.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "us-west-2a"
+}
+
+resource "aws_subnet" "alb_subnet_2" {
+  vpc_id            = aws_vpc.sidekick_vpc.id
+  cidr_block        = "10.0.4.0/24"
+  availability_zone = "us-west-2b"
+}
+
+# 2. Public Subnet (ONLY for NAT Gateway)
+resource "aws_subnet" "public_nat" {
+  vpc_id                  = aws_vpc.sidekick_vpc.id
+  cidr_block              = "10.0.5.0/24" # New small subnet just for NAT
+  availability_zone       = "us-west-2a"
+  map_public_ip_on_launch = true
+}
+
+# Internet Access In the VPC for the EC2 Pull Docker Images*************************************
+
+resource "aws_internet_gateway" "sidekick_igw" {
+  vpc_id = aws_vpc.sidekick_vpc.id
+}
+
+resource "aws_nat_gateway" "sidekick_nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public_nat.id # NAT lives in public subnet
+  depends_on    = [aws_internet_gateway.sidekick_igw, aws_eip.nat]
+}
+
+resource "aws_eip" "nat" {
+  tags = {
+    Name = "sidekick-nat-eip"
+  }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.sidekick_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.sidekick_igw.id
+  }
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.sidekick_vpc.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.sidekick_nat.id
+  }
+}
+
+resource "aws_route_table_association" "public_nat" {
+  subnet_id      = aws_subnet.public_nat.id
   route_table_id = aws_route_table.public.id
 }
 
+# 5. Associate private subnets
 resource "aws_route_table_association" "private_1" {
   subnet_id      = aws_subnet.sidekick_private_subnet_1.id
   route_table_id = aws_route_table.private.id
@@ -110,29 +108,7 @@ resource "aws_route_table_association" "private_2" {
   route_table_id = aws_route_table.private.id
 }
 
-# Elastic Cache Subnet
-resource "aws_elasticache_subnet_group" "sidekick_redis" {
-  name        = "sidekick-redis-subnet-group"
-  subnet_ids  = [aws_subnet.sidekick_private_subnet_1.id, aws_subnet.sidekick_private_subnet_2.id]
-  description = "Subnet group for Sidekick Redis"
-}
-
-# Postgres Subnet
-resource "aws_db_subnet_group" "sidekick_postgres" {
-  name       = "sidekick-postgres-subnet-group"
-  subnet_ids = [aws_subnet.sidekick_private_subnet_1.id, aws_subnet.sidekick_private_subnet_2.id]
-
-}
-
-resource "aws_service_discovery_private_dns_namespace" "sidekick" {
-  name        = "sidekick.local"
-  description = "Private DNS namespace for Sidekick services"
-  vpc         = aws_vpc.sidekick_vpc.id
-}
-
-
-
-# Elastic Cache SG
+# Security Groups ************************************************
 resource "aws_security_group" "redis_sg" {
   name        = "sidekick-redis-sg"
   description = "Security group for Sidekick Redis"
@@ -179,6 +155,7 @@ resource "aws_security_group" "ecs_service_sg" {
   name        = "sidekick-ecs-service-sg"
   description = "Security group for Sidekick ECS service"
   vpc_id      = aws_vpc.sidekick_vpc.id
+
   ingress {
     from_port       = 7500
     to_port         = 7500
@@ -220,6 +197,18 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+# Subnets Groups ****************************************************************
+
+resource "aws_elasticache_subnet_group" "sidekick_redis" {
+  name       = "sidekick-redis-subnet-group"
+  subnet_ids = [aws_subnet.sidekick_private_subnet_1.id, aws_subnet.sidekick_private_subnet_2.id]
+}
+
+resource "aws_db_subnet_group" "sidekick_postgres" {
+  name       = "sidekick-postgres-subnet-group"
+  subnet_ids = [aws_subnet.sidekick_private_subnet_1.id, aws_subnet.sidekick_private_subnet_2.id]
 }
 
 # SECRETS MANAGER *****************************************************************
@@ -267,20 +256,13 @@ data "aws_secretsmanager_secret_version" "app_credentials" {
 # Application Load Balancer ********************************************************************
 resource "aws_lb" "sidekick_alb" {
   name               = "sidekick-alb"
-  internal           = false
+  internal           = true
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
-  subnets = [
-    aws_subnet.sidekick_public_subnet.id,
-    aws_subnet.sidekick_public_subnet_2.id
-  ]
+  subnets            = [aws_subnet.alb_subnet_1.id, aws_subnet.alb_subnet_2.id]
 
   enable_deletion_protection = false
 
-  tags = {
-    Environment = "production"
-    Application = "sidekick"
-  }
 }
 
 resource "aws_lb_target_group" "sidekick_tg" {
@@ -324,7 +306,6 @@ resource "aws_elasticache_replication_group" "sidekick_redis" {
   automatic_failover_enabled = true
   at_rest_encryption_enabled = true
   transit_encryption_enabled = false
-  # auth_token                 = jsondecode(data.aws_secretsmanager_secret_version.redis_credentials.secret_string)["auth_token"]
 
   subnet_group_name  = aws_elasticache_subnet_group.sidekick_redis.name
   security_group_ids = [aws_security_group.redis_sg.id]
@@ -377,24 +358,13 @@ resource "aws_db_instance" "sidekick_postgres" {
 resource "aws_cloudwatch_log_group" "sidekick_logs" {
   name              = "/ecs/sidekick-task"
   retention_in_days = 3
-
-  tags = {
-    Environment = "production"
-    Application = "sidekick"
-  }
 }
 
 resource "aws_ecs_cluster" "sidekick_cluster" {
   name = "sidekick-cluster"
-
   setting {
     name  = "containerInsights"
     value = "enabled"
-  }
-
-  tags = {
-    Environment = "production"
-    Application = "sidekick"
   }
 }
 
@@ -431,39 +401,11 @@ resource "aws_iam_role_policy_attachment" "elasticahe_policy_attachment" {
   role       = aws_iam_role.ecs_task_execution_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "docdb_policy_attachment" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonDocDBFullAccess"
+resource "aws_iam_role_policy_attachment" "rds_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonRDSFullAccess"
   role       = aws_iam_role.ecs_task_execution_role.name
 }
 
-# Additional policy for Secrets Manager access
-resource "aws_iam_policy" "secrets_manager_access" {
-  name        = "sidekick-secrets-manager-access"
-  description = "Allows ECS tasks to access required secrets"
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
-        ],
-        Resource = [
-          aws_secretsmanager_secret.postgres_credentials.arn,
-          aws_secretsmanager_secret.redis_credentials.arn,
-          aws_secretsmanager_secret.app_credentials.arn
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "secrets_manager_access" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = aws_iam_policy.secrets_manager_access.arn
-}
 
 resource "aws_iam_policy" "logs_access" {
   name        = "sidekick-logs-access"
@@ -532,18 +474,15 @@ resource "aws_ecs_task_definition" "sidekick_task" {
       { name = "DATABASE_URL", value = "postgresql://${jsondecode(data.aws_secretsmanager_secret_version.postgres_credentials.secret_string)["username"]}:${jsondecode(data.aws_secretsmanager_secret_version.postgres_credentials.secret_string)["password"]}@${aws_db_instance.sidekick_postgres.endpoint}/sequence_sidekick?schema=public" },
       { name = "REDIS_HOST", value = aws_elasticache_replication_group.sidekick_redis.primary_endpoint_address },
       { name = "REDIS_PORT", value = tostring(aws_elasticache_replication_group.sidekick_redis.port) },
-      # { name = "REDIS_PASSWORD", value = jsondecode(data.aws_secretsmanager_secret_version.redis_credentials.secret_string)["auth_token"] },
       { name = "SEQUENCE_PROJECT_ACCESS_KEY", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["SEQUENCE_PROJECT_ACCESS_KEY"] },
       { name = "EVM_PRIVATE_KEY", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["EVM_PRIVATE_KEY"] },
+      { name = "SIGNER_TYPE", value = "aws_kms" },
+      { name = "AWS_REGION", value = "us-west-2" },
       { name = "AWS_ACCESS_KEY_ID", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["AWS_ACCESS_KEY_ID"] },
       { name = "AWS_SECRET_ACCESS_KEY", value = jsondecode(data.aws_secretsmanager_secret_version.app_credentials.secret_string)["AWS_SECRET_ACCESS_KEY"] },
     ]
   }])
 
-  tags = {
-    Environment = "production"
-    Application = "sidekick"
-  }
 }
 
 
@@ -556,9 +495,14 @@ resource "aws_ecs_service" "sidekick_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = [aws_subnet.sidekick_private_subnet_1.id, aws_subnet.sidekick_private_subnet_2.id]
-    security_groups  = [aws_security_group.ecs_service_sg.id]
-    assign_public_ip = false
+    subnets         = [aws_subnet.sidekick_private_subnet_1.id, aws_subnet.sidekick_private_subnet_2.id]
+    security_groups = [aws_security_group.ecs_service_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.sidekick_tg.arn
+    container_name   = "sidekick-container"
+    container_port   = 7500
   }
 
   depends_on = [
@@ -566,26 +510,4 @@ resource "aws_ecs_service" "sidekick_service" {
     aws_db_instance.sidekick_postgres,
     aws_elasticache_replication_group.sidekick_redis
   ]
-
-  tags = {
-    Environment = "production"
-    Application = "sidekick"
-  }
-}
-
-# OUTPUTS ************************************************************************
-output "redis_config" {
-  value = {
-    endpoint = aws_elasticache_replication_group.sidekick_redis.primary_endpoint_address
-    port     = aws_elasticache_replication_group.sidekick_redis.port
-    sg_id    = aws_security_group.redis_sg.id
-  }
-}
-
-output "postgres_endpoint" {
-  value = aws_db_instance.sidekick_postgres.endpoint
-}
-
-output "alb_dns_name" {
-  value = aws_lb.sidekick_alb.dns_name
 }
