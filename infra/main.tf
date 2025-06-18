@@ -1,28 +1,3 @@
-# !! I will modulate this soon !!
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.16"
-    }
-  }
-
-  required_version = ">= 1.2.0"
-
-  backend "s3" {
-    bucket       = "terraform-state-bucket-sidekick"
-    key          = "sidekick/terraform.tfstate"
-    region       = "us-west-2"
-    encrypt      = true
-    use_lockfile = true
-  }
-}
-
-provider "aws" {
-  region = "us-west-2"
-}
-
-
 # Network *****************************************************************
 
 module "network" {
