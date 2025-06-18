@@ -8,6 +8,14 @@ terraform {
   }
 
   required_version = ">= 1.2.0"
+
+  backend "s3" {
+    bucket       = "terraform-state-bucket-sidekick"
+    key          = "sidekick/terraform.tfstate"
+    region       = "us-west-2"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
@@ -108,6 +116,16 @@ resource "aws_route_table_association" "private_2" {
   route_table_id = aws_route_table.private.id
 }
 
+resource "aws_route_table_association" "alb_1" {
+  subnet_id      = aws_subnet.alb_subnet_1.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "alb_2" {
+  subnet_id      = aws_subnet.alb_subnet_2.id
+  route_table_id = aws_route_table.public.id
+}
+
 # Security Groups ************************************************
 resource "aws_security_group" "redis_sg" {
   name        = "sidekick-redis-sg"
@@ -191,6 +209,13 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"] # Restrict to Pragma's IPs 
   }
 
+  ingress {
+    from_port   = 7500
+    to_port     = 7500
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Restrict to Pragma's IPs 
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -256,7 +281,7 @@ data "aws_secretsmanager_secret_version" "app_credentials" {
 # Application Load Balancer ********************************************************************
 resource "aws_lb" "sidekick_alb" {
   name               = "sidekick-alb"
-  internal           = true
+  internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
   subnets            = [aws_subnet.alb_subnet_1.id, aws_subnet.alb_subnet_2.id]
