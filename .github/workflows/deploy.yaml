@@ -1,0 +1,34 @@
+name: CD - Force ECS Deployment
+
+on:
+  push:
+    branches: [ "wip-aws-infra" ]
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+      - 'testing_cd/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-west-2
+          role-to-assume: arn:aws:iam::150734033613:role/GitHubActionsDeployRole
+          role-session-name: GitHubActionsCD
+
+      - name: Force ECS Deployment
+        run: |
+          aws ecs update-service \
+            --cluster sidekick-cluster \
+            --service sidekick-service \
+            --force-new-deployment
