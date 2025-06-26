@@ -26,11 +26,13 @@ export const getLocalSigner = async (chainHandle: string) => {
 
 		const provider = await getProvider(chainConfig)
 
-		const walletEOA = new ethers.Wallet(process.env.EVM_PRIVATE_KEY || getOrCreateDevKey(), provider)
+		const walletEOA = new ethers.Wallet(
+			process.env.EVM_PRIVATE_KEY || getOrCreateDevKey(),
+			provider
+		)
 		const smartAccount = await Session.singleSigner({
 			signer: walletEOA,
-			projectAccessKey:
-				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string)
+			projectAccessKey: process.env.SEQUENCE_PROJECT_ACCESS_KEY as string
 		})
 
 		return smartAccount.account.getSigner(chainConfig.chainId)
@@ -59,8 +61,7 @@ export const getGoogleKmsSigner = async (chainHandle: string) => {
 
 		const smartAccount = await Session.singleSigner({
 			signer: googleKmsSigner,
-			projectAccessKey:
-				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string)
+			projectAccessKey: process.env.SEQUENCE_PROJECT_ACCESS_KEY as string
 		})
 
 		return smartAccount.account.getSigner(chainConfig.chainId)
@@ -86,8 +87,7 @@ export const getAwsKmsSigner = async (chainHandle: string) => {
 
 		const smartAccount = await Session.singleSigner({
 			signer: awsKmsSigner,
-			projectAccessKey:
-				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string)
+			projectAccessKey: process.env.SEQUENCE_PROJECT_ACCESS_KEY as string
 		})
 
 		return smartAccount.account.getSigner(chainConfig.chainId)

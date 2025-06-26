@@ -12,7 +12,7 @@ export const indexerClient = (indexerUrl: string): SequenceIndexer | null => {
 
 	return new SequenceIndexer(
 		indexerUrl,
-		(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string),
+		process.env.SEQUENCE_PROJECT_ACCESS_KEY as string,
 		process.env.BUILDER_API_SECRET_KEY as string
 	)
 }

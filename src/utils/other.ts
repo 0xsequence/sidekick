@@ -1,8 +1,8 @@
+import fs from 'node:fs'
 import type { NetworkConfig } from '@0xsequence/network'
 import { findSupportedNetwork } from '@0xsequence/network'
 import { type TransactionReceipt, ethers } from 'ethers'
 import { logger } from './logger'
-import fs from 'node:fs'
 
 // Helper function to validate Ethereum addresses
 export const isValidEthereumAddress = (address: string): boolean => {
@@ -51,4 +51,4 @@ export const getOrCreateDevKey = () => {
 	const wallet = ethers.Wallet.createRandom()
 	fs.writeFileSync(DEV_KEY_PATH, wallet.privateKey)
 	return wallet.privateKey
-}	
+}
