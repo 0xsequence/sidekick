@@ -15,7 +15,7 @@ Go to [Sequence Builder](https://sequence.build/), login or signup, create a pro
 docker run -p -e SEQUENCE_PROJECT_ACCESS_KEY=... 7500:7500 ghcr.io/0xsequence/sidekick:latest
 ```
 
-If you don't provide an EVM_PRIVATE_KEY environment variable, a temporary dev private key will be generated for you inside a dev.key file, you can keep using this for developemnt and testing but DO NOT USE THIS FOR PRODUCTION.
+If you don't provide an BACKEND_WALLET_PV_KEY environment variable, a temporary dev private key will be generated for you inside a dev.key file, you can keep using this for developemnt and testing but DO NOT USE THIS FOR PRODUCTION.
 
 🚨 We recommend to not use a local signer for production, use AWS KMS or Google KMS instead. 
 

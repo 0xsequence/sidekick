@@ -39,14 +39,14 @@ const DEV_KEY_PATH = './dev.key'
 
 export const getOrCreateDevKey = () => {
 	logger.warn(
-		`EVM_PRIVATE_KEY was not provided, checking for dev key at ${DEV_KEY_PATH}`
+		`BACKEND_WALLET_PV_KEY was not provided, checking for dev key at ${DEV_KEY_PATH}`
 	)
 	if (fs.existsSync(DEV_KEY_PATH)) {
 		logger.warn(`Dev key found at ${DEV_KEY_PATH}`)
 		return fs.readFileSync(DEV_KEY_PATH, 'utf-8').trim()
 	}
 	logger.warn(
-		`Dev key not found at ${DEV_KEY_PATH}, generating a new dev private key, do not use this for production. Copy, paste it into your .env as EVM_PRIVATE_KEY and delete dev.key file.`
+		`Dev key not found at ${DEV_KEY_PATH}, generating a new dev private key, do not use this for production. Copy, paste it into your .env as BACKEND_WALLET_PV_KEY and delete dev.key file.`
 	)
 	const wallet = ethers.Wallet.createRandom()
 	fs.writeFileSync(DEV_KEY_PATH, wallet.privateKey)

@@ -27,7 +27,7 @@ export const getLocalSigner = async (chainHandle: string) => {
 		const provider = await getProvider(chainConfig)
 
 		const walletEOA = new ethers.Wallet(
-			process.env.EVM_PRIVATE_KEY || getOrCreateDevKey(),
+			process.env.BACKEND_WALLET_PV_KEY || getOrCreateDevKey(),
 			provider
 		)
 		const smartAccount = await Session.singleSigner({
