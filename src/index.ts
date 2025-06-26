@@ -6,11 +6,14 @@ import bullBoard from './plugins/bull-board/bull-board'
 import bull from './plugins/bull/bull'
 import prisma from './plugins/prisma/prisma'
 import swagger from './plugins/swagger/swagger'
-import { checkConfig } from './utils/configCheck'
-
-checkConfig()
+import { logger } from './utils/logger'
 
 const isDebug = process.env.DEBUG === 'true'
+
+if (!process.env.SEQUENCE_PROJECT_ACCESS_KEY) {
+	logger.error('SEQUENCE_PROJECT_ACCESS_KEY is not set')
+	process.exit(1)
+}
 
 const fastify = Fastify({
 	logger: {
@@ -72,8 +75,6 @@ if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
 // Register Bull plugin
 await fastify.register(bull)
 await fastify.register(bullBoard)
-
-// Then register routes
 await fastify.register(import('./routes'))
 
 fastify.addHook('preHandler', auth)
