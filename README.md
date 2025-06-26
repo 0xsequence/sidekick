@@ -17,6 +17,8 @@ docker run -p -e SEQUENCE_PROJECT_ACCESS_KEY=... 7500:7500 ghcr.io/0xsequence/si
 
 If you don't provide an EVM_PRIVATE_KEY environment variable, a temporary dev private key will be generated for you inside a dev.key file, you can keep using this for developemnt and testing but DO NOT USE THIS FOR PRODUCTION.
 
+🚨 We recommend to not use a local signer for production, use AWS KMS or Google KMS instead. 
+
 ## Run locally with Docker Compose
 
 You can use the docker-compose.yml to run Sidekick with all the features like Redis, PostgreSQL, Grafana, Prometheus, Blackbox Exporter, etc.
