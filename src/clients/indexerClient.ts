@@ -1,5 +1,4 @@
 import { SequenceIndexer } from '@0xsequence/indexer'
-import { PROJECT_ACCESS_KEY_DEV } from '~/constants/general'
 
 export const indexerClient = (indexerUrl: string): SequenceIndexer | null => {
 	if (
@@ -13,7 +12,7 @@ export const indexerClient = (indexerUrl: string): SequenceIndexer | null => {
 
 	return new SequenceIndexer(
 		indexerUrl,
-		process.env.SEQUENCE_PROJECT_ACCESS_KEY as string || PROJECT_ACCESS_KEY_DEV, 
+		(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string),
 		process.env.BUILDER_API_SECRET_KEY as string
 	)
 }

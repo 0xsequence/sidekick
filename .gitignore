@@ -181,3 +181,6 @@ Thumbs.db
 # Database
 *.db
 dump.rdb
+
+# Dev key
+dev.key

@@ -4,7 +4,8 @@ import { GoogleKmsSigner } from '@0xsequence/google-kms-signer'
 import { findSupportedNetwork } from '@0xsequence/network'
 import type { NetworkConfig } from '@0xsequence/network'
 import { ethers } from 'ethers'
-import { PROJECT_ACCESS_KEY_DEV } from '~/constants/general'
+import { logger } from './logger'
+import { getOrCreateDevKey } from './other'
 
 export const getProvider = async (chainConfig: NetworkConfig) => {
 	const provider = new ethers.JsonRpcProvider(
@@ -25,20 +26,16 @@ export const getLocalSigner = async (chainHandle: string) => {
 
 		const provider = await getProvider(chainConfig)
 
-		const walletEOA = new ethers.Wallet(
-			process.env.EVM_PRIVATE_KEY as string,
-			provider
-		)
+		const walletEOA = new ethers.Wallet(process.env.EVM_PRIVATE_KEY || getOrCreateDevKey(), provider)
 		const smartAccount = await Session.singleSigner({
 			signer: walletEOA,
 			projectAccessKey:
-				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string) ||
-				PROJECT_ACCESS_KEY_DEV
+				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string)
 		})
 
 		return smartAccount.account.getSigner(chainConfig.chainId)
 	} catch (err) {
-		console.error(`ERROR: ${err}`)
+		logger.error(`Error getting local signer: ${err}`)
 		throw err
 	}
 }
@@ -63,8 +60,7 @@ export const getGoogleKmsSigner = async (chainHandle: string) => {
 		const smartAccount = await Session.singleSigner({
 			signer: googleKmsSigner,
 			projectAccessKey:
-				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string) ||
-				PROJECT_ACCESS_KEY_DEV
+				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string)
 		})
 
 		return smartAccount.account.getSigner(chainConfig.chainId)
@@ -91,8 +87,7 @@ export const getAwsKmsSigner = async (chainHandle: string) => {
 		const smartAccount = await Session.singleSigner({
 			signer: awsKmsSigner,
 			projectAccessKey:
-				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string) ||
-				PROJECT_ACCESS_KEY_DEV
+				(process.env.SEQUENCE_PROJECT_ACCESS_KEY as string)
 		})
 
 		return smartAccount.account.getSigner(chainConfig.chainId)
