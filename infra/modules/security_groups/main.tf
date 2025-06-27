@@ -15,7 +15,7 @@ resource "aws_security_group" "redis_sg" {
     from_port   = var.redis_sg_port
     to_port     = var.redis_sg_port
     protocol    = "tcp"
-    cidr_blocks = [var.redis_sg_vpc_cidr]
+    cidr_blocks = [var.redis_sg_vpc_cidr, "10.102.0.0/16"] # Pragma VPC Added
   }
 
   egress {
@@ -43,7 +43,7 @@ resource "aws_security_group" "postgres_sg" {
     from_port   = var.postgres_sg_port
     to_port     = var.postgres_sg_port
     protocol    = "tcp"
-    cidr_blocks = [var.postgres_sg_vpc_cidr]
+    cidr_blocks = [var.postgres_sg_vpc_cidr, "10.102.0.0/16"] # Pragma VPC Added
   }
 
   egress {
