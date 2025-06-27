@@ -17,4 +17,12 @@ resource "aws_elasticache_replication_group" "sidekick_redis" {
   replicas_per_node_group = var.elastic_cache_replicas_node
 
   apply_immediately = false
+
+  tags = {
+    Name      = "SidekickRedisCluster"
+    Env       = "Infra"
+    AWSRegion = "us-west-2"
+    Owner     = "DevGameServices"
+    Role      = "RedisCache"
+  }
 }

@@ -15,8 +15,11 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   })
 
   tags = {
-    Environment = "production"
-    Application = "sidekick"
+    Name      = "SidekickECSTaskExecutionRole"
+    Env       = "Infra"
+    AWSRegion = "us-west-2"
+    Owner     = "DevGameServices"
+    Role      = "ECSTaskExecutionRole"
   }
 }
 
@@ -26,15 +29,14 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "elasticahe_policy_attachment" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonElastiCacheFullAccess"
   role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonElastiCacheFullAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "rds_policy_attachment" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonRDSFullAccess"
   role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonRDSFullAccess"
 }
-
 
 resource "aws_iam_policy" "logs_access" {
   name        = var.iam_policy_logs_access_name
@@ -58,6 +60,14 @@ resource "aws_iam_policy" "logs_access" {
       }
     ]
   })
+
+  tags = {
+    Name      = "SidekickLogsAccessPolicy"
+    Env       = "Infra"
+    AWSRegion = "us-west-2"
+    Owner     = "DevGameServices"
+    Role      = "CloudWatchLogsAccess"
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "logs_access" {
