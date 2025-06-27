@@ -180,6 +180,7 @@ module "ecs" {
     { name = "DEBUG", value = "false" },
     { name = "DATABASE_URL", value = "postgresql://${jsondecode(module.kms.postgres_credentials_secret_string)["username"]}:${jsondecode(module.kms.postgres_credentials_secret_string)["password"]}@${module.postgres.postgres_endpoint}/sequence_sidekick?schema=public" },
     { name = "SEQUENCE_PROJECT_ACCESS_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["SEQUENCE_PROJECT_ACCESS_KEY"] },
+    { name = "EVM_PRIVATE_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["EVM_PRIVATE_KEY"] },
     { name = "REDIS_HOST", value = module.redis.host },
     { name = "REDIS_PORT", value = tostring(module.redis.port) },
     { name = "SIGNER_TYPE", value = "aws_kms" },
