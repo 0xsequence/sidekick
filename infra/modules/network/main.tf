@@ -161,6 +161,33 @@ resource "aws_route_table" "private" {
   }
 }
 
+# Associate private subnets
+
+resource "aws_route_table_association" "public_nat" {
+  subnet_id      = aws_subnet.public_nat.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "private_1" {
+  subnet_id      = aws_subnet.sidekick_private_subnet_1.id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_route_table_association" "private_2" {
+  subnet_id      = aws_subnet.sidekick_private_subnet_2.id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_route_table_association" "alb_1" {
+  subnet_id      = aws_subnet.alb_subnet_1.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "alb_2" {
+  subnet_id      = aws_subnet.alb_subnet_2.id
+  route_table_id = aws_route_table.public.id
+}
+
 # Subnet Groups
 resource "aws_elasticache_subnet_group" "sidekick_redis" {
   name       = "sidekick-redis-subnet-group"
