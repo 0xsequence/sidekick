@@ -48,6 +48,10 @@ This Terraform project deploys a containerized application ("Sidekick") on AWS w
 
 ## Operational Runbook
 
+Example of how to configure grafana explorer to use those queries
+
+![alt text](readme_images/image-1.png)
+
 #### A. High Error Rate
 1. **Check recent errors**:
    ```sql
