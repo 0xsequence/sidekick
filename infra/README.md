@@ -5,7 +5,8 @@ This Terraform project deploys a containerized application ("Sidekick") on AWS w
 ## Architecture Overview
 
 ```
-Pending
+[User] → [ALB] → [ECS Tasks] → [PostgreSQL/RDS]
+                ↘ [Redis Cache]
 ```
 
 ## Key Components
@@ -45,17 +46,29 @@ Pending
    - PostgreSQL for persistent data
    - Redis for caching
 
-### Testing the Deployment
-After applying the Terraform configuration, test the endpoint:
+## Operational Runbook
 
-```bash
-curl http://sidekick-alb-856591864.us-west-2.elb.amazonaws.com/
-```
+#### A. High Error Rate
+1. **Check recent errors**:
+   ```sql
+   filter @message like /statusCode\": [45]\d{2}/
+   | sort @timestamp desc
+   | limit 20
+   ```
 
-Expected response:
-```json
-{"status":"ok"}
-```
+#### B. Latency Spikes
+1. **Identify slow routes**:
+   ```sql
+   parse @message /responseTime\": (?<rt>\d+\.\d+).*\"url\": \"(?<route>[^\"]+)/
+   | stats avg(rt) by route
+   ```
+
+#### C. Missing Requests
+1. **Find incomplete requests**:
+   ```sql
+   parse @message /incoming request req-(?<id>\w+)/
+   | filter @message not like /completed/
+   ```
 
 ## Deployment
 
@@ -65,18 +78,11 @@ terraform plan
 terraform apply
 ```
 
-## Variables to Customize
+## Testing the Deployment
 
-Key variables to review before deployment:
-- VPC CIDR block
-- Instance sizes (RDS, Redis, ECS tasks)
-- Container image location (ECR)
-- Secrets (stored in AWS Secrets Manager)
-
-## Outputs
-
-The deployment outputs:
-- ALB DNS name (access point for the application)
-- RDS endpoint
-- Redis primary endpoint
-- ECR repository URL
+```bash
+curl http://sidekick-alb-856591864.us-west-2.elb.amazonaws.com
+```
+Expected response:
+```json
+{"status":"ok","version":"1.2.0"}
