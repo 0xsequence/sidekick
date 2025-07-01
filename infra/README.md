@@ -61,6 +61,7 @@ This Terraform project deploys a containerized application ("Sidekick") on AWS w
    | parse @message /\"url\": \"(?<route>[^\"]+)/
    | stats count(*) by route, statusCode
    | sort @timestamp desc  
+  
 
 #### B. Latency Spikes
 1. **Identify slow routes**:
@@ -72,9 +73,10 @@ This Terraform project deploys a containerized application ("Sidekick") on AWS w
    ```sql
    parse @message /responseTime\": (?<rt>\d+\.\d+).*\"url\": \"(?<route>[^\"]+)/
    | stats avg(rt), percentile(rt, 99) as p99 by route
-  ```
+  
 
 #### C. Missing Requests
+
 1. **Find incomplete requests**:
    ```sql
    parse @message /incoming request req-(?<id>\w+)/
