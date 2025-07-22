@@ -68,6 +68,13 @@ resource "aws_security_group" "ecs_service_sg" {
   }
 
   ingress {
+    from_port   = var.ecs_service_sg_port
+    to_port     = var.ecs_service_sg_port
+    protocol    = "tcp"
+    cidr_blocks = ["10.102.0.0/16"]
+  }
+
+  ingress {
     from_port       = var.ecs_service_sg_port
     to_port         = var.ecs_service_sg_port
     protocol        = "tcp"
