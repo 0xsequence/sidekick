@@ -187,3 +187,5 @@ dump.rdb
 *.tfstate.backup
 .terraform/
 *.terraform.lock.hcl
+# Dev key
+dev.key

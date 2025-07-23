@@ -9,9 +9,15 @@ You can get the address by making a GET request to the `/sidekick/wallet-address
 
 These commands will get you started with the simplest version of Sidekick. It will allow you to test some of the features like deploying a contract, reading from a contract and executing transactions.
 
+Go to [Sequence Builder](https://sequence.build/), login or signup, create a project, go to "Embedded Wallet" and copy your "Project Access Key"
+
 ```
-docker run -e EVM_PRIVATE_KEY=your_private_key_here -p 7500:7500 ghcr.io/0xsequence/sidekick:latest
+docker run -p -e SEQUENCE_PROJECT_ACCESS_KEY=... 7500:7500 ghcr.io/0xsequence/sidekick:latest
 ```
+
+If you don't provide an BACKEND_WALLET_PV_KEY environment variable, a temporary dev private key will be generated for you inside a dev.key file, you can keep using this for developemnt and testing but DO NOT USE THIS FOR PRODUCTION.
+
+🚨 We recommend to not use a local signer for production, use AWS KMS or Google KMS instead. 
 
 ## Run locally with Docker Compose
 
