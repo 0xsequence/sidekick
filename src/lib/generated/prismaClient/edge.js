@@ -35,12 +35,12 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 6.9.0
- * Query Engine version: 81e4af48011447c3cc503a190e86995b66d2a28e
+ * Prisma Client JS version: 6.12.0
+ * Query Engine version: 8047c96bbd92db98a2abc7c9323ce77c02c89dbc
  */
 Prisma.prismaVersion = {
-  client: "6.9.0",
-  engine: "81e4af48011447c3cc503a190e86995b66d2a28e"
+  client: "6.12.0",
+  engine: "8047c96bbd92db98a2abc7c9323ce77c02c89dbc"
 }
 
 Prisma.PrismaClientKnownRequestError = PrismaClientKnownRequestError;
@@ -160,7 +160,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/gabi/Documents/Work/Sequence/sidekick/src/lib/generated/prismaClient",
+      "value": "/home/hz/Github/sidekick/src/lib/generated/prismaClient",
       "fromEnvVar": null
     },
     "config": {
@@ -169,7 +169,7 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "darwin-arm64",
+        "value": "debian-openssl-3.0.x",
         "native": true
       },
       {
@@ -179,19 +179,22 @@ const config = {
       {
         "fromEnvVar": null,
         "value": "debian-openssl-3.0.x"
+      },
+      {
+        "fromEnvVar": null,
+        "value": "linux-musl-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/gabi/Documents/Work/Sequence/sidekick/prisma/schema.prisma",
+    "sourceFilePath": "/home/hz/Github/sidekick/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": "../../../../.env",
-    "schemaEnvPath": "../../../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../../../prisma",
-  "clientVersion": "6.9.0",
-  "engineVersion": "81e4af48011447c3cc503a190e86995b66d2a28e",
+  "clientVersion": "6.12.0",
+  "engineVersion": "8047c96bbd92db98a2abc7c9323ce77c02c89dbc",
   "datasourceNames": [
     "db"
   ],
@@ -205,8 +208,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider      = \"prisma-client-js\"\n  binaryTargets = [\"native\", \"linux-musl-arm64-openssl-3.0.x\", \"debian-openssl-3.0.x\"]\n  output        = \"../src/lib/generated/prismaClient\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Transaction {\n  id           String   @id @default(cuid())\n  hash         String?\n  txUrl        String?\n  chainId      Int\n  status       String // 'pending' | 'done' | 'failed'\n  from         String\n  to           String\n  data         String? // Made nullable for pending transactions\n  functionName String?\n  argsJson     String?  @default(\"[]\") // Store args as JSON string\n  isDeployTx   Boolean  @default(false)\n  createdAt    DateTime @default(now())\n  updatedAt    DateTime @updatedAt\n}\n\nmodel Contract {\n  id                        Int      @id @default(autoincrement())\n  builderId                 Int?     @unique\n  projectId                 Int?\n  contractName              String\n  contractAddress           String   @unique\n  contractType              String?\n  chainId                   Int\n  source                    String?\n  itemsContractAddress      String?\n  splitterContractAddresses String[] @default([])\n  abi                       String?\n  bytecode                  String\n  bytecode_hash             String?\n  audienceId                Int?\n  symbol                    String?\n  createdAt                 DateTime @default(now())\n  updatedAt                 DateTime @updatedAt\n  addedBy                   String   @default(\"sidekick\")\n}\n",
-  "inlineSchemaHash": "af289088be65d549952f826e45ca8fccf52b9e7099d95855115ac57c72d32b80",
+  "inlineSchema": "generator client {\n  provider      = \"prisma-client-js\"\n  binaryTargets = [\"native\", \"linux-musl-arm64-openssl-3.0.x\", \"debian-openssl-3.0.x\", \"linux-musl-openssl-3.0.x\"]\n  output        = \"../src/lib/generated/prismaClient\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Transaction {\n  id           String   @id @default(cuid())\n  hash         String?\n  txUrl        String?\n  chainId      Int\n  status       String // 'pending' | 'done' | 'failed'\n  from         String\n  to           String\n  data         String? // Made nullable for pending transactions\n  functionName String?\n  argsJson     String?  @default(\"[]\") // Store args as JSON string\n  isDeployTx   Boolean  @default(false)\n  createdAt    DateTime @default(now())\n  updatedAt    DateTime @updatedAt\n}\n\nmodel Contract {\n  id                        Int      @id @default(autoincrement())\n  builderId                 Int?     @unique\n  projectId                 Int?\n  contractName              String\n  contractAddress           String   @unique\n  contractType              String?\n  chainId                   Int\n  source                    String?\n  itemsContractAddress      String?\n  splitterContractAddresses String[] @default([])\n  abi                       String?\n  bytecode                  String\n  bytecode_hash             String?\n  audienceId                Int?\n  symbol                    String?\n  createdAt                 DateTime @default(now())\n  updatedAt                 DateTime @updatedAt\n  addedBy                   String   @default(\"sidekick\")\n}\n",
+  "inlineSchemaHash": "7ec12cabfea681c61e493d87865903f8608692967dc2cfdef4f75faca1ee9597",
   "copyEngine": true
 }
 config.dirname = '/'

@@ -162,7 +162,7 @@ module "ecs" {
 
   # Container
   ecs_task_definition_name                    = "sidekick-container"
-  ecs_task_definition_image                   = "${aws_ecr_repository.sidekick_test_ecr.repository_url}:latest"
+  ecs_task_definition_image                   = "${aws_ecr_repository.sidekick_test_ecr.repository_url}:v2"
   ecs_task_definition_essential               = true
   ecs_task_definition_portMappings_port       = 7500
   ecs_task_definition_portMappings_host_port  = 7500
