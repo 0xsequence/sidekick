@@ -2,6 +2,7 @@ name: Release tag
 
 on:
   push:
+    branches: [ "wip-aws-infra" ]
     tags:
       - "v*"
 
@@ -32,9 +33,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/0xsequence/sidekick:${{ github.ref_name }}
-            ghcr.io/0xsequence/sidekick:latest
-          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/0xsequence/sidekick:${{ github.ref_name }}
+          platforms: linux/amd64
           build-args: |
             VERSION=${{ github.ref_name }}
