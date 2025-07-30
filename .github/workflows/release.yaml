@@ -2,7 +2,6 @@ name: Release tag
 
 on:
   push:
-    branches: [ "wip-aws-infra" ]
     tags:
       - "v*"
 

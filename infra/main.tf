@@ -47,6 +47,14 @@ module "kms" {
   app_sm_name   = "sidekick/app/credentials"
 }
 
+# WAF ******************************************************************
+
+module "waf" {
+  source                 = "./modules/waf"
+  waf_name               = "sidekick-waf"
+  waf_scope              = "REGIONAL"
+  waf_association_lb_arn = module.load_balancer.alb_arn
+}
 
 # Application Load Balancer ********************************************************************
 
@@ -55,7 +63,7 @@ module "load_balancer" {
 
   # ALB Variables
   alb_name     = "sidekick-alb"
-  alb_internal = false
+  alb_internal = true
   alb_type     = "application"
   alb_sg       = module.security_groups.alb_sg_id
   alb_sb_1     = module.network.alb_subnet_1
@@ -73,6 +81,7 @@ module "load_balancer" {
   alb_listener_protocol = "HTTP"
   alb_listener_type     = "forward"
 }
+
 # # Redis ElastiCache Cluster *****************************************************************
 module "redis" {
   source = "./modules/redis"
@@ -162,7 +171,7 @@ module "ecs" {
 
   # Container
   ecs_task_definition_name                    = "sidekick-container"
-  ecs_task_definition_image                   = "${aws_ecr_repository.sidekick_test_ecr.repository_url}:v1"
+  ecs_task_definition_image                   = "ghcr.io/0xsequence/sidekick:wip-aws-infra"
   ecs_task_definition_essential               = true
   ecs_task_definition_portMappings_port       = 7500
   ecs_task_definition_portMappings_host_port  = 7500
@@ -178,15 +187,41 @@ module "ecs" {
     { name = "HOST", value = "0.0.0.0" },
     { name = "NODE_ENV", value = "production" },
     { name = "DEBUG", value = "false" },
+
+    # Database & Cache
     { name = "DATABASE_URL", value = "postgresql://${jsondecode(module.kms.postgres_credentials_secret_string)["username"]}:${jsondecode(module.kms.postgres_credentials_secret_string)["password"]}@${module.postgres.postgres_endpoint}/sequence_sidekick?schema=public" },
-    { name = "SEQUENCE_PROJECT_ACCESS_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["SEQUENCE_PROJECT_ACCESS_KEY"] },
-    { name = "EVM_PRIVATE_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["EVM_PRIVATE_KEY"] },
     { name = "REDIS_HOST", value = module.redis.host },
     { name = "REDIS_PORT", value = tostring(module.redis.port) },
+
+    # Sequence Configuration
+    { name = "SEQUENCE_PROJECT_ACCESS_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["SEQUENCE_PROJECT_ACCESS_KEY"] },
+
+    # Security
+    { name = "SIDEKICK_API_SECRET_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["SIDEKICK_API_SECRET_KEY"] },
+
+    # Signer Configuration (AWS KMS)
     { name = "SIGNER_TYPE", value = "aws_kms" },
     { name = "AWS_REGION", value = "us-west-2" },
     { name = "AWS_ACCESS_KEY_ID", value = jsondecode(module.kms.app_credentials_secret_string)["AWS_ACCESS_KEY_ID"] },
     { name = "AWS_SECRET_ACCESS_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["AWS_SECRET_ACCESS_KEY"] },
+    { name = "AWS_KMS_KEY_ID", value = jsondecode(module.kms.app_credentials_secret_string)["AWS_KMS_KEY_ID"] },
+
+    # Local Signer (alternative to AWS KMS)
+    { name = "EVM_PRIVATE_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["EVM_PRIVATE_KEY"] },
+
+    # Contract Verification
+    { name = "ETHERSCAN_API_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["ETHERSCAN_API_KEY"] },
+    { name = "VERIFY_CONTRACT_ON_DEPLOY", value = jsondecode(module.kms.app_credentials_secret_string)["VERIFY_CONTRACT_ON_DEPLOY"] },
+
+    # Google KMS (alternative signer, if needed)
+    { name = "PROJECT", value = jsondecode(module.kms.app_credentials_secret_string)["PROJECT"] },
+    { name = "LOCATION", value = jsondecode(module.kms.app_credentials_secret_string)["LOCATION"] },
+    { name = "KEY_RING", value = jsondecode(module.kms.app_credentials_secret_string)["KEY_RING"] },
+    { name = "CRYPTO_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["CRYPTO_KEY"] },
+    { name = "CRYPTO_KEY_VERSION", value = jsondecode(module.kms.app_credentials_secret_string)["CRYPTO_KEY_VERSION"] },
+
+    # Backward compatibility alias
+    { name = "BACKEND_WALLET_PV_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["BACKEND_WALLET_PV_KEY"] }
   ]
 
   # Service
