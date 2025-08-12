@@ -12,7 +12,7 @@ These commands will get you started with the simplest version of Sidekick. It wi
 Go to [Sequence Builder](https://sequence.build/), login or signup, create a project, go to "Embedded Wallet" and copy your "Project Access Key"
 
 ```
-docker run -p -e SEQUENCE_PROJECT_ACCESS_KEY=... 7500:7500 ghcr.io/0xsequence/sidekick:latest
+docker run -p 7500:7500 -e SEQUENCE_PROJECT_ACCESS_KEY=... ghcr.io/0xsequence/sidekick:latest
 ```
 
 If you don't provide an BACKEND_WALLET_PV_KEY environment variable, a temporary dev private key will be generated for you inside a dev.key file, you can keep using this for developemnt and testing but DO NOT USE THIS FOR PRODUCTION.
