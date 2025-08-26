@@ -1,49 +1,83 @@
 # Sidekick Infrastructure (Terraform)
 
-This Terraform project deploys a containerized application ("Sidekick") on AWS with supporting services. The infrastructure includes networking, security, databases, and orchestration components
+This Terraform project deploys a containerized application ("Sidekick") on AWS with supporting services. The infrastructure is designed for security and isolation, with current configurations allowing internal access only.
 
-## Key Components
+## 🚀 Key Components
 
 ### 1. Networking (`network` module)
 - **VPC**: `10.0.0.0/16` with public/private subnets across 2 AZs
+- **Subnet Strategy**:
+  - **Private Subnets**: `10.0.1.0/24` (us-west-2a), `10.0.2.0/24` (us-west-2b) - For ECS tasks, RDS, Redis
+  - **ALB Subnets**: `10.0.3.0/24` (us-west-2a), `10.0.4.0/24` (us-west-2b) - Currently public but will be private after VPC peering
+  - **NAT Subnet**: `10.0.5.0/24` (us-west-2a) - Public subnet for NAT Gateway only
 - **NAT Gateway**: Allows outbound internet access for private resources
-- **Route Tables**: For public and private subnet routing
+- **Route Tables**: Separate routing for public and private subnets
 
-### 2. Security (`security_groups` module)
-- Security groups for:
-  - ALB (ports 80, 443, 7500)
-  - ECS service (port 7500)
-  - PostgreSQL (port 5432)
-  - Redis (port 6379)
+### 2. Security Groups (`security_groups` module)
+**Current Security Configuration:**
+- **Redis SG**: Port 6379 open to entire VPC CIDR (`10.0.0.0/16`)
+- **PostgreSQL SG**: Port 5432 open to entire VPC CIDR (`10.0.0.0/16`)  
+- **ECS Service SG**: Port 7500 open to:
+  - Pragma VPC CIDR (`10.102.0.0/16`) - **Waiting for peering**
+  - ALB Security Group - For internal load balancer communication
+- **ALB SG**: Ports 80, 443, 7500 open to `0.0.0.0/0` but ALB is internal
 
 ### 3. Core Services
-- **ALB (`alb` module)**: Routes traffic to ECS tasks, only accessible via pragma VPC
-- **PostgreSQL (`rds` module)**: Managed database for application data
-- **Redis (`redis` module)**: Cache layer with replication
+- **ALB**: Internal Application Load Balancer (not internet-facing)
+- **PostgreSQL RDS**: Managed database for application data
+- **Redis ElastiCache**: Cache layer with replication
 
 ### 4. Container Orchestration (`ecs` module)
-- **ECS Cluster**: Runs Fargate tasks
-- **Task Definition**: Container specs (2 vCPU/4GB RAM)
-- **Service**: Maintains desired task count
+- **ECS Cluster**: Runs Fargate tasks in private subnets
+- **Task Definition**: 1 vCPU/2GB RAM container specs
+- **Service**: Maintains desired task count with load balancer integration
 
 ### 5. Supporting Services
-- **Secrets Manager (`kms` module)**: Stores credentials securely
-- **IAM (`iam` module)**: Execution roles with necessary permissions
+- **Secrets Manager**: Secure credential storage for Redis, PostgreSQL, and app credentials
+- **IAM Roles**: Execution roles with necessary permissions for ECS tasks
+- **WAF**: Web Application Firewall protection for the ALB
 
-## How It Works
+## 🔄 How It Works - Data Flow
 
-1. User traffic hits the ALB
-2. ALB forwards requests to ECS tasks in private subnets
-3. ECS tasks connect to:
-   - PostgreSQL for persistent data
-   - Redis for caching
+### Detailed Flow:
+1. **Request Entry**: Traffic originates from Pragma VPC (once peering established)
+2. **Load Balancing**: ALB (internal) receives requests and routes to ECS tasks
+3. **Container Processing**: ECS tasks in private subnets process requests
+4. **Data Access**: 
+   - Persistent data: PostgreSQL RDS
+   - Caching: Redis ElastiCache
+5. **Response**: Processed responses return through ALB to originating VPC
 
-## Terraform State
+## 🔐 Current Access Status
 
-- Shared state storage for team collaboration
-- ersioned state file history
-- Encryption for security compliance
-- Locking to prevent concurrent modifications
+### 🚫 External Internet Access: **BLOCKED**
+- ALB is configured as `internal = true`
+- No direct internet access to application
+- Outbound internet available via NAT Gateway for updates/package fetching
+
+### ⏳ Internal Cross-VPC Access: **PENDING**
+- Security groups configured to accept traffic from `10.102.0.0/16` (Pragma VPC)
+- VPC peering connection needs to be established in production
+- Route tables pre-configured for peering (commented out in code)
+
+### ✅ Internal VPC Access: **ACTIVE**
+- All components within the VPC can communicate:
+  - ECS → PostgreSQL: Port 5432
+  - ECS → Redis: Port 6379  
+  - ALB → ECS: Port 7500
+
+## 🛠️ Deployment
+
+```bash
+# Initialize Terraform (first time)
+terraform init
+
+# Plan deployment
+terraform plan
+
+# Apply infrastructure
+terraform apply
+```
 
 ## Operational Runbook
 
@@ -65,7 +99,6 @@ Example of how to configure grafana explorer to use those queries
    | stats count(*) by route, statusCode
    | sort @timestamp desc  
   
-
 #### B. Latency Spikes
 1. **Identify slow routes**:
    ```sql
@@ -76,7 +109,6 @@ Example of how to configure grafana explorer to use those queries
    ```sql
    parse @message /responseTime\": (?<rt>\d+\.\d+).*\"url\": \"(?<route>[^\"]+)/
    | stats avg(rt), percentile(rt, 99) as p99 by route
-  
 
 #### C. Missing Requests
 
@@ -85,24 +117,6 @@ Example of how to configure grafana explorer to use those queries
    parse @message /incoming request req-(?<id>\w+)/
    | filter @message not like /completed/
    ```
-
-## Deployment
-
-```bash
-terraform init
-terraform plan
-terraform apply
-```
-
-## Testing the Deployment
-
-```bash
-curl http://sidekick-alb-856591864.us-west-2.elb.amazonaws.com
-```
-Expected response:
-```json
-{"status":"ok","version":"1.2.0"}
-```
 
 ## Environment Variables Configuration
 

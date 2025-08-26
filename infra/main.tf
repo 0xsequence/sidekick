@@ -139,7 +139,7 @@ resource "aws_cloudwatch_log_group" "sidekick_logs" {
   retention_in_days = 3
 }
 
-# IAM ****************************************************************************
+# # IAM ****************************************************************************
 module "iam" {
   source = "./modules/iam"
 
@@ -149,7 +149,7 @@ module "iam" {
 }
 
 
-# ECS Definition ************************************************************************
+# # ECS Definition ************************************************************************
 
 module "ecs" {
   source = "./modules/ecs"
@@ -234,4 +234,3 @@ module "ecs" {
   ecs_service_lb_container_name   = "sidekick-container"
   ecs_service_lb_container_port   = 7500
 }
-
