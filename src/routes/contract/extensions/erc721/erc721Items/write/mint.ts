@@ -14,7 +14,7 @@ import { getSigner } from '~/utils/wallet'
 
 type ERC721ItemsMintRequestBody = {
 	to: string
-	amount: string
+	tokenId: string
 }
 
 type ERC721ItemsMintRequestParams = {
@@ -35,10 +35,10 @@ const ERC721ItemsMintSchema = {
 	tags: ['ERC721Items'],
 	body: {
 		type: 'object',
-		required: ['to', 'amount'],
+		required: ['to', 'tokenId'],
 		properties: {
 			to: { type: 'string' },
-			amount: { type: 'string' }
+			tokenId: { type: 'string' }
 		}
 	},
 	params: {
@@ -87,7 +87,7 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 			const tenderlyUrl: string | null = null
 
 			try {
-				const { to, amount } = request.body
+				const { to, tokenId } = request.body
 				const { chainId, contractAddress } = request.params
 
 				const signer = await getSigner(chainId)
@@ -108,8 +108,8 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 				)
 				logStep(request, 'Contract instance created')
 
-				const data = contract.interface.encodeFunctionData('mint', [to, amount])
-				logStep(request, 'Function data encoded', { to, amount })
+				const data = contract.interface.encodeFunctionData('mint', [to, tokenId])
+				logStep(request, 'Function data encoded', { to, tokenId })
 
 				const tx = {
 					to: contractAddress,
@@ -149,7 +149,7 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 					data: tx.data,
 					txHash: receipt?.hash ?? '',
 					isDeployTx: false,
-					args: [to, amount],
+					args: [to, tokenId],
 					functionName: 'mint'
 				})
 

@@ -161,7 +161,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/gabi/Documents/Work/Sequence/sidekick/src/lib/generated/prismaClient",
+      "value": "/Users/tomaszdysinski/Repositories/horizon/0xsequence/sidekick/src/lib/generated/prismaClient",
       "fromEnvVar": null
     },
     "config": {
@@ -183,11 +183,11 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/gabi/Documents/Work/Sequence/sidekick/prisma/schema.prisma",
+    "sourceFilePath": "/Users/tomaszdysinski/Repositories/horizon/0xsequence/sidekick/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": "../../../../.env",
+    "rootEnvPath": null,
     "schemaEnvPath": "../../../../.env"
   },
   "relativePath": "../../../../prisma",
@@ -197,7 +197,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": false,
+  "postinstall": true,
   "inlineDatasources": {
     "db": {
       "url": {
