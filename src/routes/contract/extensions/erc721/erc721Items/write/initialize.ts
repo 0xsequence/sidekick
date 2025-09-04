@@ -57,7 +57,9 @@ const ERC721ItemsInitializeSchema = {
 			'tokenBaseURI',
 			'tokenContractURI',
 			'royaltyReceiver',
-			'royaltyFeeNumerator'
+			'royaltyFeeNumerator',
+			'implicitModeValidator',
+			'implicitModeProjectId'
 		],
 		properties: {
 			owner: { type: 'string', description: 'Address of the contract owner' },
