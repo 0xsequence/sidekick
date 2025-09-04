@@ -184,3 +184,6 @@ dump.rdb
 
 # Dev key
 dev.key
+
+# Generated files
+src/lib/generated/
