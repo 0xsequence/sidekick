@@ -19,7 +19,7 @@ type ERC721ItemsInitializeRequestBody = {
 	tokenContractURI: string
 	royaltyReceiver: string
 	royaltyFeeNumerator: string
-	implicitModeValidator: string | undefined | null	
+	implicitModeValidator: string | undefined | null
 	implicitModeProjectId: string | undefined | null
 }
 

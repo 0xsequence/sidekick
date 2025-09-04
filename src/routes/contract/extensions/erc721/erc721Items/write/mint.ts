@@ -108,7 +108,10 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 				)
 				logStep(request, 'Contract instance created')
 
-				const data = contract.interface.encodeFunctionData('mint', [to, tokenId])
+				const data = contract.interface.encodeFunctionData('mint', [
+					to,
+					tokenId
+				])
 				logStep(request, 'Function data encoded', { to, tokenId })
 
 				const tx = {
