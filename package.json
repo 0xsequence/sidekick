@@ -20,7 +20,8 @@
     "start:redis": "redis-server --daemonize yes",
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
-    "tag:release": "sh ./scripts/tag-release.sh"
+    "tag:release": "sh ./scripts/tag-release.sh",
+    "postinstall": "prisma generate"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
