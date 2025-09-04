@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { encodeFunctionData } from 'viem'
+import { encodeFunctionData, numberToHex, pad, zeroAddress } from 'viem'
 
 import { erc721ItemsAbi } from '~/constants/abis/erc721Items'
 import {
@@ -19,8 +19,8 @@ type ERC721ItemsInitializeRequestBody = {
 	tokenContractURI: string
 	royaltyReceiver: string
 	royaltyFeeNumerator: string
-	implicitModeValidator: string
-	implicitModeProjectId: string
+	implicitModeValidator: string | undefined | null	
+	implicitModeProjectId: string | undefined | null
 }
 
 type ERC721ItemsInitializeRequestParams = {
@@ -57,9 +57,7 @@ const ERC721ItemsInitializeSchema = {
 			'tokenBaseURI',
 			'tokenContractURI',
 			'royaltyReceiver',
-			'royaltyFeeNumerator',
-			'implicitModeValidator',
-			'implicitModeProjectId'
+			'royaltyFeeNumerator'
 		],
 		properties: {
 			owner: { type: 'string', description: 'Address of the contract owner' },
@@ -83,11 +81,13 @@ const ERC721ItemsInitializeSchema = {
 			},
 			implicitModeValidator: {
 				type: 'string',
-				description: 'Address of the implicit mode validator'
+				description: 'Address of the implicit mode validator',
+				nullable: true
 			},
 			implicitModeProjectId: {
 				type: 'string',
-				description: 'Implicit mode project ID'
+				description: 'Implicit mode project ID',
+				nullable: true
 			}
 		}
 	},
@@ -178,9 +178,9 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 						tokenBaseURI,
 						tokenContractURI,
 						royaltyReceiver,
-						BigInt(royaltyFeeNumerator),
-						implicitModeValidator,
-						implicitModeProjectId
+						BigInt(royaltyFeeNumerator ?? 0),
+						implicitModeValidator ?? zeroAddress,
+						pad(numberToHex(Number(implicitModeProjectId ?? 0)), { size: 32 })
 					]
 				})
 				logStep(request, 'Function data encoded', {
@@ -241,8 +241,8 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 						tokenContractURI,
 						royaltyReceiver,
 						royaltyFeeNumerator,
-						implicitModeValidator,
-						implicitModeProjectId
+						implicitModeValidator ?? zeroAddress,
+						pad(numberToHex(Number(implicitModeProjectId ?? 0)), { size: 32 })
 					],
 					isDeployTx: false
 				})
