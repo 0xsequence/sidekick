@@ -170,7 +170,9 @@ export async function erc721ItemsBurn(fastify: FastifyInstance) {
 					body: request.body
 				})
 				const errorMessage =
-					error instanceof Error ? error.message : 'Unknown error during burn, please check that you own the NFT you are trying to burn'
+					error instanceof Error
+						? error.message
+						: 'Unknown error during burn, please check that you own the NFT you are trying to burn'
 				return reply.code(500).send({
 					result: {
 						txHash: null,

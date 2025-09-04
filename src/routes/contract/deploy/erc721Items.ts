@@ -1,6 +1,12 @@
 import type { TransactionReceipt, TransactionResponse } from 'ethers'
 import type { FastifyInstance } from 'fastify'
-import { encodeDeployData, encodeFunctionData, numberToHex, pad, zeroAddress } from 'viem'
+import {
+	encodeDeployData,
+	encodeFunctionData,
+	numberToHex,
+	pad,
+	zeroAddress
+} from 'viem'
 import { erc721ItemsAbi } from '~/constants/abis/erc721Items'
 import { erc721ItemsBytecode } from '~/constants/bytecodes/erc721Items'
 import {
@@ -19,9 +25,9 @@ type ERC721ItemsDeployAndInitializeRequestBody = {
 	tokenBaseURI: string
 	tokenContractURI: string
 	royaltyReceiver: string
-	royaltyFeeNumerator: string,
-	implicitModeValidator: string,
-	implicitModeProjectId: string
+	royaltyFeeNumerator: string
+	implicitModeValidator: string | undefined | null
+	implicitModeProjectId: string | undefined | null
 }
 
 type ERC721ItemsDeployAndInitializeRequestParams = {
@@ -52,9 +58,7 @@ const ERC721ItemsDeployAndInitializeSchema = {
 			'tokenBaseURI',
 			'tokenContractURI',
 			'royaltyReceiver',
-			'royaltyFeeNumerator',
-			'implicitModeValidator',
-			'implicitModeProjectId'
+			'royaltyFeeNumerator'
 		],
 		properties: {
 			owner: { type: 'string', description: 'Address of the contract owner' },
@@ -78,13 +82,15 @@ const ERC721ItemsDeployAndInitializeSchema = {
 			},
 			implicitModeValidator: {
 				type: 'string',
-				description: 'Address of the implicit mode validator'
+				description: 'Address of the implicit mode validator',
+				nullable: true
 			},
 			implicitModeProjectId: {
 				type: 'string',
-				description: 'Implicit mode project ID'
+				description: 'Implicit mode project ID',
+				nullable: true
 			}
-		}	
+		}
 	},
 	params: {
 		type: 'object',
@@ -240,10 +246,10 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 
 				// Step 2: Initialize the contract
 				// Convert the number to a hexadecimal string.
-				const hexProjectId = numberToHex(Number(implicitModeProjectId));
+				const hexProjectId = numberToHex(Number(implicitModeProjectId))
 
 				// Pad the hexadecimal string to 32 bytes.
-				const bytes32ProjectId = pad(hexProjectId, { size: 32 });
+				const bytes32ProjectId = pad(hexProjectId, { size: 32 })
 				logStep(request, 'Preparing initialize data', {
 					functionName: 'initialize',
 					args: [
@@ -253,9 +259,9 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 						tokenBaseURI,
 						tokenContractURI,
 						royaltyReceiver,
-						royaltyFeeNumerator,
-						implicitModeValidator,
-						bytes32ProjectId
+						BigInt(royaltyFeeNumerator ?? 0),
+						implicitModeValidator ?? zeroAddress,
+						pad(numberToHex(Number(implicitModeProjectId ?? 0)), { size: 32 })
 					]
 				})
 				const initializeData = encodeFunctionData({
@@ -268,9 +274,9 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 						tokenBaseURI,
 						tokenContractURI,
 						royaltyReceiver,
-						BigInt(royaltyFeeNumerator),
-						implicitModeValidator,
-						bytes32ProjectId
+						BigInt(royaltyFeeNumerator ?? 0),
+						implicitModeValidator ?? zeroAddress,
+						pad(numberToHex(Number(implicitModeProjectId ?? 0)), { size: 32 })
 					]
 				})
 				logStep(request, 'Initialize data prepared', { initializeData })
