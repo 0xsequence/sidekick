@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { type Abi, encodeFunctionData } from 'viem'
+import { encodeFunctionData } from 'viem'
 
 import { erc721ItemsAbi } from '~/constants/abis/erc721Items'
 import {
@@ -19,6 +19,8 @@ type ERC721ItemsInitializeRequestBody = {
 	tokenContractURI: string
 	royaltyReceiver: string
 	royaltyFeeNumerator: string
+	implicitModeValidator: string
+	implicitModeProjectId: string
 }
 
 type ERC721ItemsInitializeRequestParams = {
@@ -55,7 +57,9 @@ const ERC721ItemsInitializeSchema = {
 			'tokenBaseURI',
 			'tokenContractURI',
 			'royaltyReceiver',
-			'royaltyFeeNumerator'
+			'royaltyFeeNumerator',
+			'implicitModeValidator',
+			'implicitModeProjectId'
 		],
 		properties: {
 			owner: { type: 'string', description: 'Address of the contract owner' },
@@ -76,6 +80,14 @@ const ERC721ItemsInitializeSchema = {
 			royaltyFeeNumerator: {
 				type: 'string',
 				description: 'Royalty fee numerator (e.g., 500 for 5%)'
+			},
+			implicitModeValidator: {
+				type: 'string',
+				description: 'Address of the implicit mode validator'
+			},
+			implicitModeProjectId: {
+				type: 'string',
+				description: 'Implicit mode project ID'
 			}
 		}
 	},
@@ -139,7 +151,9 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 					tokenBaseURI,
 					tokenContractURI,
 					royaltyReceiver,
-					royaltyFeeNumerator
+					royaltyFeeNumerator,
+					implicitModeValidator,
+					implicitModeProjectId
 				} = request.body
 
 				const signer = await getSigner(chainId)
@@ -164,7 +178,9 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 						tokenBaseURI,
 						tokenContractURI,
 						royaltyReceiver,
-						BigInt(royaltyFeeNumerator)
+						BigInt(royaltyFeeNumerator),
+						implicitModeValidator,
+						implicitModeProjectId
 					]
 				})
 				logStep(request, 'Function data encoded', {
@@ -224,7 +240,9 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 						tokenBaseURI,
 						tokenContractURI,
 						royaltyReceiver,
-						royaltyFeeNumerator
+						royaltyFeeNumerator,
+						implicitModeValidator,
+						implicitModeProjectId
 					],
 					isDeployTx: false
 				})
