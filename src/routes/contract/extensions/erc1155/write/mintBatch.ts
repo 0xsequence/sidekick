@@ -101,7 +101,7 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
 			schema: ERC1155MintBatchSchema
 		},
 		async (request, reply) => {
-			const tenderlyUrl: string | null = null
+			let tenderlyUrl: string | null = null
 			try {
 				logRequest(request)
 
@@ -138,7 +138,7 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
 						txs,
 						Number(chainId)
 					)
-				const tenderlyUrl = getTenderlySimulationUrl({
+				tenderlyUrl = getTenderlySimulationUrl({
 					chainId: chainId,
 					gas: 3000000,
 					block: await signer.provider.getBlockNumber(),

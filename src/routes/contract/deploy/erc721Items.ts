@@ -244,12 +244,6 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 					isDeployTx: true
 				})
 
-				// Step 2: Initialize the contract
-				// Convert the number to a hexadecimal string.
-				const hexProjectId = numberToHex(Number(implicitModeProjectId))
-
-				// Pad the hexadecimal string to 32 bytes.
-				const bytes32ProjectId = pad(hexProjectId, { size: 32 })
 				logStep(request, 'Preparing initialize data', {
 					functionName: 'initialize',
 					args: [

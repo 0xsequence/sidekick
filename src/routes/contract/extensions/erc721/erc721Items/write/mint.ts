@@ -84,7 +84,7 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 		async (request, reply) => {
 			logRequest(request)
 
-			const tenderlyUrl: string | null = null
+			let tenderlyUrl: string | null = null
 
 			try {
 				const { to, tokenId } = request.body
@@ -125,7 +125,7 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 						[tx],
 						Number(chainId)
 					)
-				const tenderlyUrl = getTenderlySimulationUrl({
+				tenderlyUrl = getTenderlySimulationUrl({
 					chainId: chainId,
 					gas: 3000000,
 					block: await signer.provider.getBlockNumber(),
@@ -133,6 +133,8 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 					contractAddress: signedTx.entrypoint,
 					rawFunctionInput: simulationData
 				})
+
+				console.log('tenderlyUrl', tenderlyUrl)
 
 				const txService = new TransactionService(fastify)
 

@@ -109,7 +109,7 @@ export async function writeContract(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			logRequest(request)
-			const tenderlyUrl: string | null = null
+			let tenderlyUrl: string | null = null
 			try {
 				const { args, abi: abiFromBody } = request.body
 				const { chainId, contractAddress, functionName } = request.params
@@ -195,7 +195,7 @@ export async function writeContract(fastify: FastifyInstance) {
 						[tx],
 						Number(chainId)
 					)
-				const tenderlyUrl = getTenderlySimulationUrl({
+				tenderlyUrl = getTenderlySimulationUrl({
 					chainId: chainId,
 					gas: 3000000,
 					block: await signer.provider.getBlockNumber(),
