@@ -143,9 +143,10 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 			logRequest(request)
 
 			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress } = request.params
 
 			try {
-				const { chainId, contractAddress } = request.params
 				const {
 					owner,
 					tokenName,
@@ -216,6 +217,7 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 					to: contractAddress,
 					data: initializeData
 				})
+				txHash = txResponse.hash
 				logStep(request, 'Initialize transaction sent', { txResponse })
 
 				const receipt = await txResponse.wait()
@@ -261,18 +263,40 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				let errorTxHash: string | null = null
+				
+				if ((error as any)?.receipt?.txnReceipt) {
+					const txnReceiptString = (error as any).receipt.txnReceipt
+					try {
+						const txnReceipt = JSON.parse(txnReceiptString)
+						errorTxHash = txnReceipt.transactionHash
+					} catch (parseError) {
+						console.log('Failed to parse txnReceipt:', parseError)
+					}
+				}
+				
+				// If we have logs, we can also get the hash from the first log
+				if ((error as any)?.receipt?.logs?.[0]?.transactionHash) {
+					errorTxHash = (error as any).receipt.logs[0].transactionHash
+				}
+				
+				const finalTxHash = txHash ?? errorTxHash
+				
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					txHash: finalTxHash
 				})
+				
 				const errorMessage =
 					error instanceof Error
 						? error.message
 						: 'Unknown error during initialization'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}
