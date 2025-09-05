@@ -83,7 +83,7 @@ export async function erc721SafeMint(fastify: FastifyInstance) {
 			schema: ERC721SafeMintSchema
 		},
 		async (request, reply) => {
-			const tenderlyUrl: string | null = null
+			let tenderlyUrl: string | null = null
 
 			try {
 				logRequest(request)
@@ -115,7 +115,7 @@ export async function erc721SafeMint(fastify: FastifyInstance) {
 						[tx],
 						Number(chainId)
 					)
-				const tenderlyUrl = getTenderlySimulationUrl({
+				tenderlyUrl = getTenderlySimulationUrl({
 					chainId: chainId,
 					gas: 3000000,
 					block: await signer.provider.getBlockNumber(),

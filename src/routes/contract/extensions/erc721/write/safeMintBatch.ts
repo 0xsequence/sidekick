@@ -85,7 +85,7 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
 		async (request, reply) => {
 			logRequest(request)
 
-			const tenderlyUrl: string | null = null
+			let tenderlyUrl: string | null = null
 
 			try {
 				const { recipients, tokenIds } = request.body
@@ -119,7 +119,7 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
 						txs,
 						Number(chainId)
 					)
-				const tenderlyUrl = getTenderlySimulationUrl({
+				tenderlyUrl = getTenderlySimulationUrl({
 					chainId: chainId,
 					gas: 3000000,
 					block: await signer.provider.getBlockNumber(),
