@@ -1,5 +1,5 @@
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 
 import { ethers } from 'ethers'
 import type { TransactionResponse } from 'ethers'
@@ -87,10 +87,11 @@ export async function erc20Approve(fastify: FastifyInstance) {
 			logRequest(request)
 
 			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress } = request.params
 
 			try {
 				const { spender, amount } = request.body
-				const { chainId, contractAddress } = request.params
 
 				const signer = await getSigner(chainId)
 				if (!signer || !signer.account?.address) {
@@ -136,6 +137,7 @@ export async function erc20Approve(fastify: FastifyInstance) {
 
 				logStep(request, 'Sending approve transaction...')
 				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
 				logStep(request, 'Approve transaction sent', {
 					txHash: txResponse.hash
 				})
@@ -164,19 +166,26 @@ export async function erc20Approve(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					txHash: finalTxHash
 				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to execute approve'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
-						error:
-							error instanceof Error
-								? error.message
-								: 'Failed to execute approve'
+						error: errorMessage
 					}
 				})
 			}

@@ -9,7 +9,7 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC1155GrantRoleRequestBody = {
@@ -98,10 +98,13 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			logRequest(request)
+
 			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress } = request.params
+
 			try {
 				const { role, account } = request.body
-				const { chainId, contractAddress } = request.params
 
 				const signer = await getSigner(chainId)
 				if (!signer || !signer.account?.address) {
@@ -151,6 +154,7 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
 
 				logStep(request, 'Sending grantRole transaction...')
 				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
 				logStep(request, 'grantRole transaction sent', { txResponse })
 
 				const receipt = await txResponse.wait()
@@ -180,16 +184,26 @@ export async function erc1155GrantRole(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					txHash: finalTxHash
 				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to grant role'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
-						error: error instanceof Error ? error.message : 'Failed to mint NFT'
+						error: errorMessage
 					}
 				})
 			}

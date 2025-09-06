@@ -8,8 +8,8 @@ import {
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
-import { logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC1155ItemsBurnRequestBody = {
@@ -98,12 +98,14 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
 			schema: ERC1155ItemsBurnSchema
 		},
 		async (request, reply) => {
-			const tenderlyUrl: string | null = null
-			try {
-				logRequest(request)
+			logRequest(request)
 
+			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress } = request.params
+
+			try {
 				const { tokenId, amount } = request.body
-				const { chainId, contractAddress } = request.params
 
 				const signer = await getSigner(chainId)
 				logStep(request, 'Tx signer received', {
@@ -145,6 +147,7 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
 
 				logStep(request, 'Sending burn transaction...')
 				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
 				logStep(request, 'Burn transaction sent', { txResponse })
 
 				const receipt = await txResponse.wait()
@@ -175,16 +178,24 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
-				request.log.error(
-					error,
-					'Failed to burn token on ERC1155Items contract'
-				)
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
+				logError(request, error, {
+					params: request.params,
+					body: request.body,
+					txHash: finalTxHash
+				})
+
 				const errorMessage =
-					error instanceof Error ? error.message : 'Unknown error during burn'
+					error instanceof Error
+						? error.message
+						: 'Unknown error during burn'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}

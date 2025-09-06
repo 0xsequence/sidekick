@@ -9,7 +9,7 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC721ItemsMintRequestBody = {
@@ -85,11 +85,12 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 			logRequest(request)
 
 			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+
+			const { to, tokenId } = request.body
+			const { chainId, contractAddress } = request.params
 
 			try {
-				const { to, tokenId } = request.body
-				const { chainId, contractAddress } = request.params
-
 				const signer = await getSigner(chainId)
 				if (!signer || !signer.account?.address) {
 					logError(request, new Error('Signer not configured correctly.'), {
@@ -134,19 +135,17 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 					rawFunctionInput: simulationData
 				})
 
-				console.log('tenderlyUrl', tenderlyUrl)
-
 				const txService = new TransactionService(fastify)
 
 				logStep(request, 'Sending mint transaction...')
 				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
 				logStep(request, 'Mint transaction sent', { txResponse })
 
 				const receipt = await txResponse.wait()
 				if (receipt?.status === 0) {
-					throw new Error('Transaction reverted')
+					throw new Error('Transaction reverted', {cause: receipt})
 				}
-
 				await txService.createTransaction({
 					chainId,
 					contractAddress,
@@ -169,14 +168,20 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+				
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					txHash: finalTxHash
 				})
+				
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error:
 							error instanceof Error

@@ -7,8 +7,8 @@ import {
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
-import { logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC20TransferFromRequestBody = {
@@ -85,13 +85,14 @@ export async function erc20TransferFrom(fastify: FastifyInstance) {
 			schema: ERC20TransferFromSchema
 		},
 		async (request, reply) => {
+			logRequest(request)
+
 			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress } = request.params
 
 			try {
-				logRequest(request)
-
 				const { from, to, amount } = request.body
-				const { chainId, contractAddress } = request.params
 
 				const signer = await getSigner(chainId)
 				logStep(request, 'Tx signer received', {
@@ -131,6 +132,7 @@ export async function erc20TransferFrom(fastify: FastifyInstance) {
 
 				logStep(request, 'Sending transferFrom transaction...')
 				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
 				logStep(request, 'TransferFrom transaction sent', {
 					txHash: txResponse.hash
 				})
@@ -163,16 +165,26 @@ export async function erc20TransferFrom(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
-				request.log.error(error)
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
+				logError(request, error, {
+					params: request.params,
+					body: request.body,
+					txHash: finalTxHash
+				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to execute transfer'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
-						error:
-							error instanceof Error
-								? error.message
-								: 'Failed to execute transfer'
+						error: errorMessage
 					}
 				})
 			}

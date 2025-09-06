@@ -15,7 +15,7 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC721ItemsDeployAndInitializeRequestBody = {
@@ -137,12 +137,15 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 			schema: ERC721ItemsDeployAndInitializeSchema
 		},
 		async (request, reply) => {
-			const deploymentSimulationUrl: string | null = null
-			const initializationSimulationUrl: string | null = null
+			logRequest(request)
+
+			let deploymentSimulationUrl: string | null = null
+			let initializationSimulationUrl: string | null = null
+			let deploymentTxHash: string | null = null
+			let initializationTxHash: string | null = null
+			const { chainId } = request.params
 
 			try {
-				logRequest(request)
-				const { chainId } = request.params
 				const {
 					owner,
 					tokenName,
@@ -200,6 +203,7 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 				logStep(request, 'Sending deployment transaction', { deployData })
 				const deployTx: TransactionResponse =
 					await signer.sendTransaction(deploymentTx)
+				deploymentTxHash = deployTx.hash
 				logStep(request, 'Deployment transaction sent', { deployTx })
 
 				logStep(request, 'Waiting for deployment receipt', {
@@ -308,6 +312,7 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 					initializeData
 				})
 				const initializeTx = await signer.sendTransaction(initializationTx)
+				initializationTxHash = initializeTx.hash
 				logStep(request, 'Initialization transaction sent')
 
 				logStep(request, 'Waiting for initialization receipt', {
@@ -362,25 +367,34 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalDeploymentTxHash = deploymentTxHash ?? errorTxHash
+				const finalInitializationTxHash = initializationTxHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					deploymentTxHash: finalDeploymentTxHash,
+					initializationTxHash: finalInitializationTxHash
 				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to deploy and initialize ERC721Items contract'
 				return reply.code(500).send({
 					result: {
-						deploymentTxHash: null,
-						deploymentTxUrl: null,
-						initializationTxHash: null,
-						initializationTxUrl: null,
+						deploymentTxHash: finalDeploymentTxHash,
+						deploymentTxUrl: finalDeploymentTxHash ? getBlockExplorerUrl(Number(chainId), finalDeploymentTxHash) : null,
+						initializationTxHash: finalInitializationTxHash,
+						initializationTxUrl: finalInitializationTxHash ? getBlockExplorerUrl(Number(chainId), finalInitializationTxHash) : null,
 						deployedContractAddress: null,
 						txSimulationUrls: [
 							deploymentSimulationUrl ?? '',
 							initializationSimulationUrl ?? ''
 						],
-						error:
-							error instanceof Error
-								? error.message
-								: 'Failed to deploy and initialize ERC721Items contract'
+						error: errorMessage
 					}
 				})
 			}
