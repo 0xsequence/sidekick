@@ -8,7 +8,8 @@ import {
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC1155ItemsMintRequestBody = {
@@ -85,10 +86,14 @@ export async function erc1155ItemsMint(fastify: FastifyInstance) {
 		'/write/erc1155Items/:chainId/:contractAddress/mint',
 		{ schema: ERC1155ItemsMintSchema },
 		async (request, reply) => {
-			const tenderlyUrl: string | null = null
+			logRequest(request)
+
+			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress } = request.params
+
 			try {
 				const { to, tokenId, amount, data } = request.body
-				const { chainId, contractAddress } = request.params
 
 				const signer = await getSigner(chainId)
 				const contract = new ethers.Contract(
@@ -126,7 +131,10 @@ export async function erc1155ItemsMint(fastify: FastifyInstance) {
 
 				const txService = new TransactionService(fastify)
 
+				logStep(request, 'Sending mint transaction...')
 				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
+				logStep(request, 'Mint transaction sent', { txResponse })
 
 				const receipt = await txResponse.wait()
 
@@ -153,16 +161,26 @@ export async function erc1155ItemsMint(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
-				request.log.error(error)
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
+				logError(request, error, {
+					params: request.params,
+					body: request.body,
+					txHash: finalTxHash
+				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to mint ERC1155Items'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
-						error:
-							error instanceof Error
-								? error.message
-								: 'Failed to mint ERC1155Items'
+						error: errorMessage
 					}
 				})
 			}

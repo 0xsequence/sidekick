@@ -10,7 +10,7 @@ import {
 import { AbiSchema } from '~/schemas/contractSchemas'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type WriteRequestBody = {
@@ -109,10 +109,13 @@ export async function writeContract(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			logRequest(request)
+
 			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress, functionName } = request.params
+
 			try {
 				const { args, abi: abiFromBody } = request.body
-				const { chainId, contractAddress, functionName } = request.params
 
 				// Get the signer to use for the transaction
 				const signer = await getSigner(chainId)
@@ -208,6 +211,7 @@ export async function writeContract(fastify: FastifyInstance) {
 
 				logStep(request, 'Sending contract transaction...')
 				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
 				logStep(request, 'Contract transaction sent', {
 					txHash: txResponse.hash
 				})
@@ -238,19 +242,26 @@ export async function writeContract(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					txHash: finalTxHash
 				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to execute contract transaction'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
-						error:
-							error instanceof Error
-								? error.message
-								: 'Failed to execute contract transaction'
+						error: errorMessage
 					}
 				})
 			}

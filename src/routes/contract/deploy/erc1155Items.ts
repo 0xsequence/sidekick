@@ -1,6 +1,6 @@
 import type { TransactionReceipt, TransactionResponse } from 'ethers'
 import type { FastifyInstance } from 'fastify'
-import { encodeDeployData, encodeFunctionData, zeroAddress } from 'viem'
+import { encodeDeployData, encodeFunctionData, numberToHex, pad, zeroAddress } from 'viem'
 import { erc1155ItemsAbi } from '~/constants/abis/erc1155Items'
 import { erc1155ItemsBytecode } from '~/constants/bytecodes/erc1155Items'
 import {
@@ -9,7 +9,7 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC1155ItemsDeployRequestBody = {
@@ -19,6 +19,8 @@ type ERC1155ItemsDeployRequestBody = {
 	tokenContractURI: string
 	royaltyReceiver: string
 	royaltyFeeNumerator: string
+	implicitModeValidator: string | undefined | null
+	implicitModeProjectId: string | undefined | null
 }
 
 type ERC1155ItemsDeployRequestParams = {
@@ -49,7 +51,9 @@ const ERC1155ItemsDeploySchema = {
 			'tokenBaseURI',
 			'tokenContractURI',
 			'royaltyReceiver',
-			'royaltyFeeNumerator'
+			'royaltyFeeNumerator',
+			'implicitModeValidator',
+			'implicitModeProjectId'
 		],
 		properties: {
 			owner: { type: 'string', description: 'Address of the contract owner' },
@@ -69,7 +73,17 @@ const ERC1155ItemsDeploySchema = {
 			royaltyFeeNumerator: {
 				type: 'string',
 				description: 'Royalty fee numerator (e.g., 500 for 5%)'
-			}
+			},
+			implicitModeValidator: {
+				type: 'string',
+				description: 'Address of the implicit mode validator',
+				nullable: true
+			},
+			implicitModeProjectId: {
+				type: 'string',
+				description: 'Implicit mode project ID',
+				nullable: true
+			}	
 		}
 	},
 	params: {
@@ -117,18 +131,24 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 			schema: ERC1155ItemsDeploySchema
 		},
 		async (request, reply) => {
-			const deploymentSimulationUrl: string | null = null
-			const initializationSimulationUrl: string | null = null
+			logRequest(request)
+
+			let deploymentSimulationUrl: string | null = null
+			let initializationSimulationUrl: string | null = null
+			let deploymentTxHash: string | null = null
+			let initializationTxHash: string | null = null
+			const { chainId } = request.params
+
 			try {
-				logRequest(request)
-				const { chainId } = request.params
 				const {
 					owner,
 					tokenName,
 					tokenBaseURI,
 					tokenContractURI,
 					royaltyReceiver,
-					royaltyFeeNumerator
+					royaltyFeeNumerator,
+					implicitModeValidator,
+					implicitModeProjectId
 				} = request.body
 
 				logStep(request, 'Getting tx signer', { chainId })
@@ -160,6 +180,7 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 				const deployTx: TransactionResponse = await signer.sendTransaction({
 					data: deployData
 				})
+				deploymentTxHash = deployTx.hash
 				logStep(request, 'Deployment transaction sent', { deployTx })
 
 				const {
@@ -239,7 +260,9 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 						tokenBaseURI,
 						tokenContractURI,
 						royaltyReceiver,
-						BigInt(royaltyFeeNumerator)
+						BigInt(royaltyFeeNumerator),
+						implicitModeValidator ?? zeroAddress,
+						pad(numberToHex(Number(implicitModeProjectId ?? 0)), { size: 32 })
 					]
 				})
 				logStep(request, 'Initialize data prepared', { initializeData })
@@ -268,6 +291,7 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 
 				logStep(request, 'Sending initialization transaction')
 				const initializeTx = await signer.sendTransaction(initializationTx)
+				initializationTxHash = initializeTx.hash
 				logStep(request, 'Initialization transaction sent')
 
 				logStep(request, 'Waiting for initialization receipt', {
@@ -319,25 +343,34 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalDeploymentTxHash = deploymentTxHash ?? errorTxHash
+				const finalInitializationTxHash = initializationTxHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					deploymentTxHash: finalDeploymentTxHash,
+					initializationTxHash: finalInitializationTxHash
 				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to deploy and initialize ERC1155Items contract'
 				return reply.code(500).send({
 					result: {
-						deploymentTxHash: null,
-						deploymentTxUrl: null,
-						initializationTxHash: null,
-						initializationTxUrl: null,
+						deploymentTxHash: finalDeploymentTxHash,
+						deploymentTxUrl: finalDeploymentTxHash ? getBlockExplorerUrl(Number(chainId), finalDeploymentTxHash) : null,
+						initializationTxHash: finalInitializationTxHash,
+						initializationTxUrl: finalInitializationTxHash ? getBlockExplorerUrl(Number(chainId), finalInitializationTxHash) : null,
 						deployedContractAddress: null,
 						txSimulationUrls: [
 							deploymentSimulationUrl ?? '',
 							initializationSimulationUrl ?? ''
 						],
-						error:
-							error instanceof Error
-								? error.message
-								: 'Failed to deploy and initialize ERC1155Items contract'
+						error: errorMessage
 					}
 				})
 			}

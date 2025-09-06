@@ -52,3 +52,24 @@ export const getOrCreateDevKey = () => {
 	fs.writeFileSync(DEV_KEY_PATH, wallet.privateKey)
 	return wallet.privateKey
 }
+
+export const extractTxHashFromErrorReceipt = (error: any) => {
+	let errorTxHash: string | null = null
+
+	if ((error as any)?.receipt?.txnReceipt) {
+		const txnReceiptString = (error as any).receipt.txnReceipt
+		try {
+			const txnReceipt = JSON.parse(txnReceiptString)
+			errorTxHash = txnReceipt.transactionHash
+		} catch (parseError) {
+			console.log('Failed to parse txnReceipt:', parseError)
+		}
+	}
+
+	// If we have logs, we can also get the hash from the first log
+	if ((error as any)?.receipt?.logs?.[0]?.transactionHash) {
+		errorTxHash = (error as any).receipt.logs[0].transactionHash
+	}
+
+	return errorTxHash
+}

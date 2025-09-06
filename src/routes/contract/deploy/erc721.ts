@@ -11,7 +11,7 @@ import {
 import { TransactionService } from '~/services/transaction.service'
 import { verifyContract } from '~/utils/contractVerification'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC721DeployRequestBody = {
@@ -98,11 +98,13 @@ export async function erc721Deploy(fastify: FastifyInstance) {
 			schema: ERC721DeploySchema
 		},
 		async (request, reply) => {
-			const tenderlyUrl: string | null = null
-			try {
-				logRequest(request)
+			logRequest(request)
 
-				const { chainId } = request.params
+			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId } = request.params
+
+			try {
 				const { defaultAdmin, minter, name, symbol } = request.body
 
 				logStep(request, 'Getting tx signer', { chainId })
@@ -131,6 +133,7 @@ export async function erc721Deploy(fastify: FastifyInstance) {
 				const tx = await signer.sendTransaction({
 					data
 				})
+				txHash = tx.hash
 				logStep(request, 'Deploy transaction sent', { tx })
 
 				const { simulationData, signedTx } =
@@ -236,18 +239,27 @@ export async function erc721Deploy(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					txHash: finalTxHash
 				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to deploy ERC721'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl,
 						deployedContractAddress: null,
-						error:
-							error instanceof Error ? error.message : 'Failed to deploy ERC721'
+						error: errorMessage
 					}
 				})
 			}

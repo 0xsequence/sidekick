@@ -7,7 +7,7 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC721ItemsBatchBurnRequestBody = {
@@ -176,23 +176,7 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
 				})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
-				let errorTxHash: string | null = null
-				
-				if ((error as any)?.receipt?.txnReceipt) {
-					const txnReceiptString = (error as any).receipt.txnReceipt
-					try {
-						const txnReceipt = JSON.parse(txnReceiptString)
-						errorTxHash = txnReceipt.transactionHash
-					} catch (parseError) {
-						console.log('Failed to parse txnReceipt:', parseError)
-					}
-				}
-				
-				// If we have logs, we can also get the hash from the first log
-				if ((error as any)?.receipt?.logs?.[0]?.transactionHash) {
-					errorTxHash = (error as any).receipt.logs[0].transactionHash
-				}
-				
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
 				const finalTxHash = txHash ?? errorTxHash
 				
 				logError(request, error, {

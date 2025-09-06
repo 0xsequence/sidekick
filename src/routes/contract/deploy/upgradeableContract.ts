@@ -7,7 +7,7 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type DeployUpgradeableContractRequestBody = {
@@ -119,11 +119,15 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 			schema: DeployUpgradeableContractSchema
 		},
 		async (request, reply) => {
-			const deploymentSimulationUrl: string | null = null
-			const initializationSimulationUrl: string | null = null
+			logRequest(request)
+
+			let deploymentSimulationUrl: string | null = null
+			let initializationSimulationUrl: string | null = null
+			let deploymentTxHash: string | null = null
+			let initializationTxHash: string | null = null
+			const { chainId } = request.params
+
 			try {
-				logRequest(request)
-				const { chainId } = request.params
 				const {
 					implementationAbi,
 					implementationBytecode,
@@ -195,6 +199,7 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 
 				logStep(request, 'Sending implementation deployment transaction')
 				const deployTxResponse = await signer.sendTransaction(deploymentTx)
+				deploymentTxHash = deployTxResponse.hash
 				logStep(request, 'Implementation deployment transaction sent')
 
 				logStep(request, 'Waiting for implementation deployment receipt', {
@@ -288,6 +293,7 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 				)
 				const initializeTxResponse =
 					await signer.sendTransaction(initializationTx)
+				initializationTxHash = initializeTxResponse.hash
 				logStep(request, 'Initialization transaction sent', {
 					initializationTxHash: initializeTxResponse.hash
 				})
@@ -345,20 +351,28 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalDeploymentTxHash = deploymentTxHash ?? errorTxHash
+				const finalInitializationTxHash = initializationTxHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					deploymentTxHash: finalDeploymentTxHash,
+					initializationTxHash: finalInitializationTxHash
 				})
+
 				const errorMessage =
 					error instanceof Error
 						? error.message
 						: 'Unknown error during upgradeable contract deployment'
 				return reply.code(500).send({
 					result: {
-						deploymentTxHash: null,
-						deploymentTxUrl: null,
-						initializationTxHash: null,
-						initializationTxUrl: null,
+						deploymentTxHash: finalDeploymentTxHash,
+						deploymentTxUrl: finalDeploymentTxHash ? getBlockExplorerUrl(Number(chainId), finalDeploymentTxHash) : null,
+						initializationTxHash: finalInitializationTxHash,
+						initializationTxUrl: finalInitializationTxHash ? getBlockExplorerUrl(Number(chainId), finalInitializationTxHash) : null,
 						deployedContractAddress: null,
 						txSimulationUrls: [
 							deploymentSimulationUrl ?? '',

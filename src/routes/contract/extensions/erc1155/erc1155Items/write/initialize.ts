@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 
-import { type Abi, encodeFunctionData } from 'viem'
+import { type Abi, encodeFunctionData, numberToHex, pad, zeroAddress } from 'viem'
 import { erc1155ItemsAbi } from '~/constants/abis/erc1155Items'
 import {
 	getTenderlySimulationUrl,
@@ -8,7 +8,7 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC1155ItemsInitializeRequestBody = {
@@ -18,6 +18,8 @@ type ERC1155ItemsInitializeRequestBody = {
 	tokenContractURI: string
 	royaltyReceiver: string
 	royaltyFeeNumerator: string
+	implicitModeValidator: string | undefined | null
+	implicitModeProjectId: string | undefined | null
 }
 
 type ERC1155ItemsInitializeRequestParams = {
@@ -53,7 +55,9 @@ const ERC1155ItemsInitializeSchema = {
 			'tokenBaseURI',
 			'tokenContractURI',
 			'royaltyReceiver',
-			'royaltyFeeNumerator'
+			'royaltyFeeNumerator',
+			'implicitModeValidator',
+			'implicitModeProjectId'
 		],
 		properties: {
 			owner: { type: 'string', description: 'Address of the contract owner' },
@@ -73,6 +77,16 @@ const ERC1155ItemsInitializeSchema = {
 			royaltyFeeNumerator: {
 				type: 'string',
 				description: 'Royalty fee numerator (e.g., 500 for 5%)'
+			},
+			implicitModeValidator: {
+				type: 'string',
+				description: 'Address of the implicit mode validator',
+				nullable: true
+			},
+			implicitModeProjectId: {
+				type: 'string',
+				description: 'Implicit mode project ID',
+				nullable: true
 			}
 		}
 	},
@@ -124,16 +138,21 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			logRequest(request)
-			const tenderlyUrl: string | null = null
+
+			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress } = request.params
+
 			try {
-				const { chainId, contractAddress } = request.params
 				const {
 					owner,
 					tokenName,
 					tokenBaseURI,
 					tokenContractURI,
 					royaltyReceiver,
-					royaltyFeeNumerator
+					royaltyFeeNumerator,
+					implicitModeValidator,
+					implicitModeProjectId
 				} = request.body
 
 				const signer = await getSigner(chainId)
@@ -157,7 +176,9 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 						tokenBaseURI,
 						tokenContractURI,
 						royaltyReceiver,
-						BigInt(royaltyFeeNumerator)
+						BigInt(royaltyFeeNumerator),
+						implicitModeValidator ?? zeroAddress,
+						pad(numberToHex(Number(implicitModeProjectId ?? 0)), { size: 32 })
 					]
 				})
 				logStep(request, 'Function data encoded', {
@@ -166,7 +187,9 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 					tokenBaseURI,
 					tokenContractURI,
 					royaltyReceiver,
-					royaltyFeeNumerator
+					royaltyFeeNumerator,
+					implicitModeValidator,
+					implicitModeProjectId
 				})
 
 				const tx = {
@@ -193,6 +216,7 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 					chainId
 				})
 				const txResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
 				logStep(request, 'Initialize transaction sent', {
 					txHash: txResponse.hash
 				})
@@ -223,7 +247,9 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 						tokenBaseURI,
 						tokenContractURI,
 						royaltyReceiver,
-						royaltyFeeNumerator
+						royaltyFeeNumerator,
+						implicitModeValidator ?? zeroAddress,
+						pad(numberToHex(Number(implicitModeProjectId ?? 0)), { size: 32 })
 					],
 					isDeployTx: false
 				})
@@ -237,18 +263,24 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					txHash: finalTxHash
 				})
+
 				const errorMessage =
 					error instanceof Error
 						? error.message
 						: 'Unknown error during initialization'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}

@@ -8,7 +8,7 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { getBlockExplorerUrl } from '~/utils/other'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC721MintRequestBody = {
@@ -99,10 +99,11 @@ export async function erc721Mint(fastify: FastifyInstance) {
 			logRequest(request)
 
 			let tenderlyUrl: string | null = null
+			let txHash: string | null = null
+			const { chainId, contractAddress } = request.params
 
 			try {
 				const { to, tokenId } = request.body
-				const { chainId, contractAddress } = request.params
 
 				const signer = await getSigner(chainId)
 				logStep(request, 'Tx signer received', {
@@ -142,6 +143,7 @@ export async function erc721Mint(fastify: FastifyInstance) {
 
 				logStep(request, 'Sending transaction...')
 				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				txHash = txResponse.hash
 				logStep(request, 'Transaction sent', { txResponse })
 
 				const receipt = await txResponse.wait()
@@ -170,16 +172,26 @@ export async function erc721Mint(fastify: FastifyInstance) {
 					}
 				})
 			} catch (error) {
+				// Extract transaction hash from error receipt if available
+				const errorTxHash = extractTxHashFromErrorReceipt(error)
+				const finalTxHash = txHash ?? errorTxHash
+
 				logError(request, error, {
 					params: request.params,
-					body: request.body
+					body: request.body,
+					txHash: finalTxHash
 				})
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: 'Failed to mint NFT'
 				return reply.code(500).send({
 					result: {
-						txHash: null,
-						txUrl: null,
+						txHash: finalTxHash,
+						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
 						txSimulationUrl: tenderlyUrl ?? null,
-						error: error instanceof Error ? error.message : 'Failed to mint NFT'
+						error: errorMessage
 					}
 				})
 			}
