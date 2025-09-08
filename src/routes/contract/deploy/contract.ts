@@ -15,6 +15,7 @@ type DeployContractRequestBody = {
 	abi: Array<ethers.InterfaceAbi>
 	bytecode: string
 	args: Array<string>
+	waitForReceipt?: boolean
 }
 
 type DeployContractRequestParams = {
@@ -45,7 +46,8 @@ const DeployContractSchema = {
 				type: 'string',
 				description:
 					'String representation of the bytecode without the 0x prefix'
-			}
+			},
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -97,7 +99,7 @@ export async function deployContract(fastify: FastifyInstance) {
 			const { chainId } = request.params
 
 			try {
-				const { args, abi, bytecode } = request.body
+				const { args, abi, bytecode, waitForReceipt } = request.body
 
 				if (!bytecode.startsWith('0x')) {
 					logError(request, new Error('Bytecode must start with 0x'), {
@@ -130,63 +132,60 @@ export async function deployContract(fastify: FastifyInstance) {
 					to: zeroAddress
 				}
 
-				logStep(request, 'Sending deploy transaction...')
-				const tx = await signer.sendTransaction({
-					data
-				})
-				txHash = tx.hash
-				logStep(request, 'Deploy transaction sent', { txHash: tx.hash })
-
-				const { simulationData, signedTx } =
-					await prepareTransactionsForTenderlySimulation(
-						signer,
-						[deploymentTx],
-						Number(chainId)
-					)
-				const tenderlyUrl = getTenderlySimulationUrl({
-					chainId: chainId,
-					gas: 3000000,
-					block: await signer.provider.getBlockNumber(),
-					contractAddress: signedTx.entrypoint,
-					blockIndex: 0,
-					rawFunctionInput: simulationData
-				})
-
-				const receipt = await tx.wait()
-				logStep(request, 'Deploy transaction mined', { receipt })
-
-				const deployedContractAddress = getContractAddressFromEvent(
-					receipt,
-					'CreatedContract(address)'
+			const { simulationData, signedTx } =
+				await prepareTransactionsForTenderlySimulation(
+					signer,
+					[deploymentTx],
+					Number(chainId)
 				)
+			const tenderlyUrl = getTenderlySimulationUrl({
+				chainId: chainId,
+				gas: 3000000,
+				block: await signer.provider.getBlockNumber(),
+				contractAddress: signedTx.entrypoint,
+				blockIndex: 0,
+				rawFunctionInput: simulationData
+			})
 
-				if (receipt?.status === 0) {
-					logError(request, new Error('Transaction reverted'), { receipt })
-					throw new Error('Transaction reverted')
+			logStep(request, 'Sending deploy transaction...')
+			const tx = await signer.sendTransaction({
+				data
+			}, {waitForReceipt: true})
+			txHash = tx.hash
+			logStep(request, 'Deploy transaction sent', { txHash: tx.hash })
+
+			if (tx.receipt?.status === 0) {
+				logError(request, new Error('Transaction reverted'), { receipt: tx.receipt })
+				throw new Error('Transaction reverted', { cause: tx.receipt })
+			}
+
+			const deployedContractAddress = getContractAddressFromEvent(
+				tx.receipt,
+				'CreatedContract(address)'
+			)
+
+			await txService.createTransaction({
+				chainId,
+				contractAddress: deployedContractAddress,
+				abi,
+				data,
+				txHash: txHash,
+				isDeployTx: true,
+				args
+			})
+			logStep(request, 'Transaction added in db', { txHash: txHash })
+
+			logStep(request, 'Deploy transaction success', {
+				txHash: txHash
+			})
+			return reply.code(200).send({
+				result: {
+					txHash: txHash,
+					txUrl: getBlockExplorerUrl(Number(chainId), txHash),
+					txSimulationUrl: tenderlyUrl,
+					deployedContractAddress: deployedContractAddress
 				}
-
-				await txService.createTransaction({
-					chainId,
-					contractAddress: deployedContractAddress,
-					abi,
-					data,
-					txHash: receipt?.hash ?? '',
-					isDeployTx: true,
-					args
-				})
-				logStep(request, 'Transaction added in db', { txHash: receipt?.hash })
-
-				logStep(request, 'Deploy transaction success', {
-					txHash: receipt?.hash
-				})
-				return reply.code(200).send({
-					result: {
-						txHash: receipt?.hash ?? null,
-						txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
-						txSimulationUrl: tenderlyUrl,
-						deployedContractAddress: deployedContractAddress
-					}
-				})
+			})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)

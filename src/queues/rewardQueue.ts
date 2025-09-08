@@ -28,7 +28,7 @@ export function createRewardQueue(fastify: FastifyInstance) {
 
 	// Handle failed jobs
 	rewardQueue.on('failed', (job, err) => {
-		fastify.log.error(`Job ${job.id} has failed:`, err)
+		fastify.log.error(`Job ${job.id} has failed: ${err}`)
 	})
 
 	// Process rewards distribution
@@ -90,13 +90,12 @@ export function createRewardQueue(fastify: FastifyInstance) {
 				}
 			} catch (error) {
 				fastify.log.error(
-					`Failed to distribute rewards to ${recipients}:`,
-					error
+					`Failed to distribute rewards to ${recipients}: ${error}`
 				)
 				throw error // This will mark the job as failed
 			}
 		} catch (error) {
-			fastify.log.error('Error processing rewards:', error)
+			fastify.log.error(`Error processing rewards: ${error}`)
 			throw error
 		}
 	})

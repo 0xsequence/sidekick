@@ -32,12 +32,12 @@
     "tsx": "^4.19.2"
   },
   "dependencies": {
-    "@0xsequence/auth": "^2.2.11",
+    "@0xsequence/auth": "^2.3.27",
     "@0xsequence/aws-kms-signer": "^0.1.1",
-    "@0xsequence/core": "^2.3.16",
+    "@0xsequence/core": "^2.3.27",
     "@0xsequence/google-kms-signer": "^0.2.0",
-    "@0xsequence/indexer": "^2.2.13",
-    "@0xsequence/network": "^2.2.11",
+    "@0xsequence/indexer": "^2.3.27",
+    "@0xsequence/network": "^2.3.27",
     "@aws-sdk/client-kms": "^3.750.0",
     "@bull-board/api": "^6.7.8",
     "@bull-board/fastify": "^6.7.8",

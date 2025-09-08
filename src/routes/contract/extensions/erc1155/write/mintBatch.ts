@@ -1,4 +1,3 @@
-import type { TransactionResponse } from 'ethers'
 import type { FastifyInstance } from 'fastify'
 
 import { ethers } from 'ethers'
@@ -11,12 +10,14 @@ import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
 import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
+import type { TransactionResponse } from '~/types/general'
 
 type ERC1155MintBatchRequestBody = {
 	recipients: string[]
 	ids: string[]
 	amounts: string[]
 	datas: string[]
+	waitForReceipt?: boolean
 }
 
 type ERC1155MintBatchRequestParams = {
@@ -42,7 +43,8 @@ const ERC1155MintBatchSchema = {
 			recipients: { type: 'array', items: { type: 'string' } },
 			ids: { type: 'array', items: { type: 'string' } },
 			amounts: { type: 'array', items: { type: 'string' } },
-			datas: { type: 'array', items: { type: 'string' } }
+			datas: { type: 'array', items: { type: 'string' } },
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -108,7 +110,7 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
 			const { chainId, contractAddress } = request.params
 
 			try {
-				const { recipients, ids, amounts, datas } = request.body
+				const { recipients, ids, amounts, datas, waitForReceipt } = request.body
 
 				const signer = await getSigner(chainId)
 				logStep(request, 'Tx signer received', {
@@ -153,16 +155,14 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
 
 				const txService = new TransactionService(fastify)
 
-				logStep(request, 'Sending transactions...')
-				const txResponse: TransactionResponse =
-					await signer.sendTransaction(txs)
-				txHash = txResponse.hash
-				logStep(request, 'Transactions sent', { txResponse })
+			logStep(request, 'Sending mintBatch transaction...')
+			const txResponse: TransactionResponse = await signer.sendTransaction(txs, {waitForReceipt: waitForReceipt ?? false})
+			txHash = txResponse.hash
+			logStep(request, 'MintBatch transaction sent', { txResponse })
 
-				const receipt = await txResponse.wait()
-				if (receipt?.status === 0) {
-					throw new Error('Transaction reverted')
-				}
+			if (txResponse.receipt?.status === 0) {
+				throw new Error('Transaction reverted', { cause: txResponse.receipt })
+			}
 
 				txs.forEach(async (tx, index) => {
 					await txService.createTransaction({
@@ -170,23 +170,23 @@ export async function erc1155MintBatch(fastify: FastifyInstance) {
 						contractAddress,
 						abi: erc1155Abi,
 						data: tx.data,
-						txHash: receipt?.hash ?? '',
+						txHash: txHash ?? '',
 						isDeployTx: false,
 						args: [recipients[index], ids[index], amounts[index], datas[index]],
 						functionName: 'mint'
 					})
 				})
 
-				logStep(request, 'Mint batch transaction success', {
-					txHash: txResponse.hash
-				})
-				return reply.code(200).send({
-					result: {
-						txHash: txResponse.hash,
-						txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
-						txSimulationUrl: tenderlyUrl ?? null
-					}
-				})
+			logStep(request, 'MintBatch transaction success', {
+				txHash: txHash
+			})
+			return reply.code(200).send({
+				result: {
+					txHash: txHash,
+					txUrl: getBlockExplorerUrl(Number(chainId), txHash),
+					txSimulationUrl: tenderlyUrl ?? null
+				}
+			})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)

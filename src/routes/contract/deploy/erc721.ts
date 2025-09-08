@@ -19,6 +19,7 @@ type ERC721DeployRequestBody = {
 	minter: string
 	name: string
 	symbol: string
+	waitForReceipt?: boolean
 }
 
 type ERC721DeployRequestParams = {
@@ -46,7 +47,8 @@ const ERC721DeploySchema = {
 			defaultAdmin: { type: 'string' },
 			minter: { type: 'string' },
 			name: { type: 'string' },
-			symbol: { type: 'string' }
+			symbol: { type: 'string' },
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -105,7 +107,7 @@ export async function erc721Deploy(fastify: FastifyInstance) {
 			const { chainId } = request.params
 
 			try {
-				const { defaultAdmin, minter, name, symbol } = request.body
+				const { defaultAdmin, minter, name, symbol, waitForReceipt } = request.body
 
 				logStep(request, 'Getting tx signer', { chainId })
 				const signer = await getSigner(chainId)
@@ -129,48 +131,44 @@ export async function erc721Deploy(fastify: FastifyInstance) {
 					to: zeroAddress
 				}
 
-				logStep(request, 'Sending deploy transaction', { data })
-				const tx = await signer.sendTransaction({
-					data
-				})
-				txHash = tx.hash
-				logStep(request, 'Deploy transaction sent', { tx })
-
-				const { simulationData, signedTx } =
-					await prepareTransactionsForTenderlySimulation(
-						signer,
-						[deploymentTx],
-						Number(chainId)
-					)
-				const tenderlyUrl = getTenderlySimulationUrl({
-					chainId: chainId,
-					gas: 3000000,
-					block: await signer.provider.getBlockNumber(),
-					contractAddress: signedTx.entrypoint,
-					blockIndex: 0,
-					rawFunctionInput: simulationData
-				})
-
-				logStep(request, 'Waiting for deploy receipt', { txHash: tx.hash })
-				const receipt = await tx.wait()
-				logStep(request, 'Deploy receipt received', { receipt })
-
-				const deployedContractAddress = getContractAddressFromEvent(
-					receipt,
-					'CreatedContract(address)'
+			const { simulationData, signedTx } =
+				await prepareTransactionsForTenderlySimulation(
+					signer,
+					[deploymentTx],
+					Number(chainId)
 				)
+			const tenderlyUrl = getTenderlySimulationUrl({
+				chainId: chainId,
+				gas: 3000000,
+				block: await signer.provider.getBlockNumber(),
+				contractAddress: signedTx.entrypoint,
+				blockIndex: 0,
+				rawFunctionInput: simulationData
+			})
 
-				if (receipt?.status === 0) {
-					logError(request, new Error('Transaction reverted'), { receipt })
-					throw new Error('Transaction reverted')
-				}
+			logStep(request, 'Sending deploy transaction', { data })
+			const tx = await signer.sendTransaction({
+				data
+			}, {waitForReceipt: true})
+			txHash = tx.hash
+			logStep(request, 'Deploy transaction sent', { tx })
+
+			if (tx.receipt?.status === 0) {
+				logError(request, new Error('Transaction reverted'), { receipt: tx.receipt })
+				throw new Error('Transaction reverted', { cause: tx.receipt })
+			}
+
+			const deployedContractAddress = getContractAddressFromEvent(
+				tx.receipt,
+				'CreatedContract(address)'
+			)
 
 				logStep(request, 'Creating transaction record in db', {
 					chainId,
-					contractAddress: receipt?.contractAddress ?? '',
+					contractAddress: deployedContractAddress,
 					abi: erc721Abi,
 					data,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					isDeployTx: true
 				})
 				const txService = new TransactionService(fastify)
@@ -179,13 +177,13 @@ export async function erc721Deploy(fastify: FastifyInstance) {
 					contractAddress: deployedContractAddress,
 					abi: erc721Abi,
 					data,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					isDeployTx: true
 				})
 
-				logStep(request, 'Deploy transaction success', {
-					txHash: receipt?.hash
-				})
+			logStep(request, 'Deploy transaction success', {
+				txHash: txHash
+			})
 
 				// --- Verification logic (added) ---
 				if (process.env.VERIFY_CONTRACT_ON_DEPLOY === 'true') {
@@ -230,14 +228,14 @@ export async function erc721Deploy(fastify: FastifyInstance) {
 				}
 				// --- End verification logic ---
 
-				return reply.code(200).send({
-					result: {
-						txHash: receipt?.hash ?? null,
-						txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
-						txSimulationUrl: tenderlyUrl,
-						deployedContractAddress: deployedContractAddress
-					}
-				})
+			return reply.code(200).send({
+				result: {
+					txHash: txHash,
+					txUrl: getBlockExplorerUrl(Number(chainId), txHash),
+					txSimulationUrl: tenderlyUrl,
+					deployedContractAddress: deployedContractAddress
+				}
+			})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)

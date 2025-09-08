@@ -21,6 +21,7 @@ type ERC20DeployRequestBody = {
 	initialOwner: string
 	name: string
 	symbol: string
+	waitForReceipt?: boolean
 }
 
 type ERC20DeployRequestParams = {
@@ -47,7 +48,8 @@ const ERC20DeploySchema = {
 		properties: {
 			initialOwner: { type: 'string' },
 			name: { type: 'string' },
-			symbol: { type: 'string' }
+			symbol: { type: 'string' },
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -111,7 +113,7 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 			const { chainId } = request.params
 
 			try {
-				const { initialOwner, name, symbol } = request.body
+				const { initialOwner, name, symbol, waitForReceipt } = request.body
 
 				logStep(request, 'Getting tx signer', { chainId })
 				const signer = await getSigner(chainId)
@@ -136,13 +138,6 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 					to: zeroAddress
 				}
 
-				logStep(request, 'Sending deploy transaction', { data })
-				const tx = await signer.sendTransaction({
-					data
-				})
-				txHash = tx.hash
-				logStep(request, 'Deploy transaction sent', { tx })
-
 				const { simulationData, signedTx } =
 					await prepareTransactionsForTenderlySimulation(
 						signer,
@@ -158,26 +153,29 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 					rawFunctionInput: simulationData
 				})
 
-				logStep(request, 'Waiting for deploy receipt', { txHash: tx.hash })
-				const receipt = await tx.wait()
-				logStep(request, 'Deploy receipt received', { receipt })
+				logStep(request, 'Sending deploy transaction', { data })
+				const tx = await signer.sendTransaction({
+					data
+				}, {waitForReceipt: true})
+				txHash = tx.hash
+				logStep(request, 'Deploy transaction sent', { tx })
+
+				if (tx.receipt?.status === 0) {
+					logError(request, new Error('Transaction reverted'), { receipt: tx.receipt })
+					throw new Error('Transaction reverted', { cause: tx.receipt })
+				}
 
 				const deployedContractAddress = getContractAddressFromEvent(
-					receipt,
+					tx.receipt,
 					'CreatedContract(address)'
 				)
-
-				if (receipt?.status === 0) {
-					logError(request, new Error('Transaction reverted'), { receipt })
-					throw new Error('Transaction reverted')
-				}
 
 				logStep(request, 'Creating transaction record in db', {
 					chainId,
 					contractAddress: deployedContractAddress,
 					abi: erc20Abi,
 					data,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					isDeployTx: true
 				})
 				const txService = new TransactionService(fastify)
@@ -186,12 +184,12 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 					contractAddress: deployedContractAddress,
 					abi: erc20Abi,
 					data,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					isDeployTx: true
 				})
 
 				logStep(request, 'Deploy transaction success', {
-					txHash: receipt?.hash
+					txHash: txHash
 				})
 
 				logStep(request, 'Checking if contract is verified')
@@ -238,8 +236,8 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 
 				return reply.code(200).send({
 					result: {
-						txHash: receipt?.hash ?? null,
-						txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
 						txSimulationUrl: tenderlyUrl,
 						deployedContractAddress: deployedContractAddress
 					}

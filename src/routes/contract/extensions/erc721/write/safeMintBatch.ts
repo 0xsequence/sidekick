@@ -1,6 +1,6 @@
-import type { TransactionResponse } from 'ethers'
-import { ethers } from 'ethers'
 import type { FastifyInstance } from 'fastify'
+
+import { ethers } from 'ethers'
 import { erc721Abi } from '~/constants/abis/erc721'
 import {
 	getTenderlySimulationUrl,
@@ -10,10 +10,12 @@ import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
 import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
+import type { TransactionResponse } from '~/types/general'
 
 type ERC721SafeMintBatchRequestBody = {
 	recipients: string[]
 	tokenIds: string[]
+	waitForReceipt?: boolean
 }
 
 type ERC721SafeMintBatchRequestParams = {
@@ -37,7 +39,8 @@ const ERC721SafeMintBatchSchema = {
 		required: ['recipients', 'tokenIds'],
 		properties: {
 			recipients: { type: 'array', items: { type: 'string' } },
-			tokenIds: { type: 'array', items: { type: 'string' } }
+			tokenIds: { type: 'array', items: { type: 'string' } },
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -90,7 +93,7 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
 			const { chainId, contractAddress } = request.params
 
 			try {
-				const { recipients, tokenIds } = request.body
+				const { recipients, tokenIds, waitForReceipt } = request.body
 
 				const signer = await getSigner(chainId)
 				logStep(request, 'Tx signer received', {
@@ -131,16 +134,13 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
 
 				const txService = new TransactionService(fastify)
 
-				logStep(request, 'Sending batch transaction...')
-				const txResponse: TransactionResponse =
-					await signer.sendTransaction(txs)
+				logStep(request, 'Sending safeMintBatch transaction...')
+				const txResponse: TransactionResponse = await signer.sendTransaction(txs, {waitForReceipt: waitForReceipt ?? false})
 				txHash = txResponse.hash
-				logStep(request, 'Batch transaction sent', { txResponse })
+				logStep(request, 'SafeMintBatch transaction sent', { txResponse })
 
-				const receipt = await txResponse.wait()
-
-				if (receipt?.status === 0) {
-					throw new Error('Transaction reverted')
+				if (txResponse.receipt?.status === 0) {
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
 				}
 
 				txs.forEach(async (tx, index) => {
@@ -149,18 +149,18 @@ export async function erc721SafeMintBatch(fastify: FastifyInstance) {
 						contractAddress,
 						abi: erc721Abi,
 						data: tx.data,
-						txHash: receipt?.hash ?? '',
+						txHash: txHash ?? '',
 						isDeployTx: false,
 						args: [recipients[index], tokenIds[index]],
 						functionName: 'safeMint'
 					})
 				})
 
-				logStep(request, 'Batch transaction success', { txResponse })
+				logStep(request, 'SafeMintBatch transaction success', { txHash: txHash })
 				return reply.code(200).send({
 					result: {
-						txHash: txResponse.hash,
-						txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
 						txSimulationUrl: tenderlyUrl ?? null
 					}
 				})

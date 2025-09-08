@@ -10,9 +10,11 @@ import {
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
 import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
+import type { TransactionResponse } from '~/types/general'
 
 type ERC721ItemsBurnRequestBody = {
 	tokenId: string
+	waitForReceipt?: boolean
 }
 
 type ERC721ItemsBurnRequestParams = {
@@ -44,7 +46,8 @@ const ERC721ItemsBurnSchema = {
 		type: 'object',
 		required: ['tokenId'],
 		properties: {
-			tokenId: { type: 'string', description: 'The ID of the token to burn.' }
+			tokenId: { type: 'string', description: 'The ID of the token to burn.' },
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	headers: {
@@ -89,7 +92,7 @@ export async function erc721ItemsBurn(fastify: FastifyInstance) {
 			const { chainId, contractAddress } = request.params
 
 			try {
-				const { tokenId } = request.body
+				const { tokenId, waitForReceipt } = request.body
 
 				const signer = await getSigner(chainId)
 				if (!signer || !signer.account?.address) {
@@ -131,19 +134,15 @@ export async function erc721ItemsBurn(fastify: FastifyInstance) {
 				})
 
 				logStep(request, 'Sending burn transaction...')
-				const txResponse = await signer.sendTransaction({
+				const txResponse: TransactionResponse = await signer.sendTransaction({
 					to: contractAddress,
 					data: burnData
-				})
+				}, {waitForReceipt: waitForReceipt ?? false})
 				txHash = txResponse.hash
 				logStep(request, 'Burn transaction sent', { txResponse })
 
-				const receipt = await txResponse.wait()
-				logStep(request, 'Burn transaction mined', { receipt })
-
-				if (receipt?.status === 0) {
-					logError(request, new Error('Burn transaction reverted'), { receipt })
-					throw new Error('Burn transaction reverted')
+				if (txResponse.receipt?.status === 0) {
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
 				}
 
 				await txService.createTransaction({
@@ -151,18 +150,18 @@ export async function erc721ItemsBurn(fastify: FastifyInstance) {
 					contractAddress,
 					abi: erc721ItemsAbi,
 					data: burnData,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					functionName: 'burn',
 					args: [tokenId],
 					isDeployTx: false
 				})
 				logStep(request, 'Transaction record created in db')
 
-				logStep(request, 'Burn transaction success', { txHash: receipt?.hash })
+				logStep(request, 'Burn transaction success', { txHash: txHash })
 				return reply.code(200).send({
 					result: {
-						txHash: receipt?.hash ?? null,
-						txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
 						txSimulationUrl: tenderlyUrl ?? null
 					}
 				})

@@ -1,4 +1,3 @@
-import type { TransactionResponse } from 'ethers'
 import type { FastifyInstance } from 'fastify'
 
 import { ethers } from 'ethers'
@@ -11,10 +10,12 @@ import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
 import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
+import type { TransactionResponse } from '~/types/general'
 
 type ERC721ItemsMintRequestBody = {
 	to: string
 	tokenId: string
+	waitForReceipt?: boolean
 }
 
 type ERC721ItemsMintRequestParams = {
@@ -38,7 +39,8 @@ const ERC721ItemsMintSchema = {
 		required: ['to', 'tokenId'],
 		properties: {
 			to: { type: 'string' },
-			tokenId: { type: 'string' }
+			tokenId: { type: 'string' },
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -87,7 +89,7 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 			let tenderlyUrl: string | null = null
 			let txHash: string | null = null
 
-			const { to, tokenId } = request.body
+			const { to, tokenId, waitForReceipt } = request.body
 			const { chainId, contractAddress } = request.params
 
 			try {
@@ -138,32 +140,32 @@ export async function erc721ItemsMint(fastify: FastifyInstance) {
 				const txService = new TransactionService(fastify)
 
 				logStep(request, 'Sending mint transaction...')
-				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				const txResponse: TransactionResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
 				txHash = txResponse.hash
 				logStep(request, 'Mint transaction sent', { txResponse })
 
-				const receipt = await txResponse.wait()
-				if (receipt?.status === 0) {
-					throw new Error('Transaction reverted', {cause: receipt})
+				if (txResponse.receipt?.status === 0) {
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
 				}
+
 				await txService.createTransaction({
 					chainId,
 					contractAddress,
 					abi: erc721ItemsAbi,
 					data: tx.data,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					isDeployTx: false,
 					args: [to, tokenId],
 					functionName: 'mint'
 				})
 
 				logStep(request, 'Mint transaction success', {
-					txHash: txResponse.hash
+					txHash: txHash
 				})
 				return reply.code(200).send({
 					result: {
-						txHash: txResponse.hash,
-						txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
 						txSimulationUrl: tenderlyUrl ?? null
 					}
 				})
