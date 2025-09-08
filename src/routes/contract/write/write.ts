@@ -1,4 +1,4 @@
-import type { InterfaceAbi, TransactionResponse } from 'ethers'
+import type { InterfaceAbi } from 'ethers'
 import type { FastifyInstance } from 'fastify'
 
 import { ethers } from 'ethers'
@@ -12,10 +12,12 @@ import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
 import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
+import type { TransactionResponse } from '~/types/general'
 
 type WriteRequestBody = {
 	abi?: InterfaceAbi
 	args?: Array<string>
+	waitForReceipt?: boolean | undefined
 }
 
 type WriteRequestParams = {
@@ -51,6 +53,11 @@ const WriteContractSchema = {
 				items: AbiSchema,
 				description:
 					'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.'
+			},
+			waitForReceipt: {
+				type: 'boolean', nullable: true,
+				description: 'Whether to wait for the transaction receipt',
+				default: false
 			}
 		}
 	},
@@ -115,7 +122,7 @@ export async function writeContract(fastify: FastifyInstance) {
 			const { chainId, contractAddress, functionName } = request.params
 
 			try {
-				const { args, abi: abiFromBody } = request.body
+				const { args, abi: abiFromBody, waitForReceipt } = request.body
 
 				// Get the signer to use for the transaction
 				const signer = await getSigner(chainId)
@@ -210,17 +217,15 @@ export async function writeContract(fastify: FastifyInstance) {
 				const txService = new TransactionService(fastify)
 
 				logStep(request, 'Sending contract transaction...')
-				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				const txResponse: TransactionResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
 				txHash = txResponse.hash
 				logStep(request, 'Contract transaction sent', {
 					txHash: txResponse.hash
 				})
 
-				const receipt = await txResponse.wait()
-
-				if (receipt?.status === 0) {
-					throw new Error('Transaction reverted')
-				}
+			if (txResponse.receipt?.status === 0) {
+				throw new Error('Transaction reverted', { cause: txResponse.receipt })
+			}
 
 				await txService.createTransaction({
 					chainId,
@@ -228,19 +233,19 @@ export async function writeContract(fastify: FastifyInstance) {
 					// @ts-ignore
 					abi: abiFromBody ?? abiFromDb,
 					data: tx.data,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					isDeployTx: false,
 					args: args ?? [],
 					functionName: functionName
 				})
 
-				return reply.code(200).send({
-					result: {
-						txHash: txResponse.hash,
-						txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
-						txSimulationUrl: tenderlyUrl ?? null
-					}
-				})
+			return reply.code(200).send({
+				result: {
+					txHash: txHash,
+					txUrl: getBlockExplorerUrl(Number(chainId), txHash),
+					txSimulationUrl: tenderlyUrl ?? null
+				}
+			})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)

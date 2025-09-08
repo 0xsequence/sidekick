@@ -14,8 +14,7 @@ export default fp(async (fastify: FastifyInstance) => {
 
 	serverAdapter.setBasePath('/admin/queues')
 	fastify.register(serverAdapter.registerPlugin(), {
-		prefix: '/admin/queues',
-		basePath: '/admin/queues'
+		prefix: '/admin/queues'
 	})
 
 	fastify.log.info('Bull Board available at /admin/queues')

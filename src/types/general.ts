@@ -1,3 +1,5 @@
+import { commons } from "@0xsequence/core"
+
 export type TenderlySimulatorUrlOptions = {
 	chainId: number | string
 	from?: string
@@ -11,3 +13,5 @@ export type TenderlySimulatorUrlOptions = {
 	rawFunctionInput?: string
 	functionInputs?: unknown[]
 }
+
+export type TransactionResponse = commons.transaction.TransactionResponse

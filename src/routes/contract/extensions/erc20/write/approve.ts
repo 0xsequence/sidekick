@@ -1,20 +1,21 @@
-import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
+import type { FastifyInstance } from 'fastify'
 
 import { ethers } from 'ethers'
-import type { TransactionResponse } from 'ethers'
-import type { FastifyInstance } from 'fastify'
 import { erc20Abi } from '~/constants/abis/erc20'
 import {
 	getTenderlySimulationUrl,
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
+import type { TransactionResponse } from '~/types/general'
 
 type ERC20ApproveRequestBody = {
 	spender: string
 	amount: string
+	waitForReceipt?: boolean
 }
 
 type ERC20ApproveRequestParams = {
@@ -38,7 +39,8 @@ const ERC20ApproveSchema = {
 		required: ['spender', 'amount'],
 		properties: {
 			spender: { type: 'string' },
-			amount: { type: 'string' }
+			amount: { type: 'string' },
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -91,7 +93,7 @@ export async function erc20Approve(fastify: FastifyInstance) {
 			const { chainId, contractAddress } = request.params
 
 			try {
-				const { spender, amount } = request.body
+				const { spender, amount, waitForReceipt } = request.body
 
 				const signer = await getSigner(chainId)
 				if (!signer || !signer.account?.address) {
@@ -135,36 +137,35 @@ export async function erc20Approve(fastify: FastifyInstance) {
 
 				const txService = new TransactionService(fastify)
 
-				logStep(request, 'Sending approve transaction...')
-				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
-				txHash = txResponse.hash
-				logStep(request, 'Approve transaction sent', {
-					txHash: txResponse.hash
-				})
+			logStep(request, 'Sending approve transaction...')
+			const txResponse: TransactionResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
+			txHash = txResponse.hash
+			logStep(request, 'Approve transaction sent', {
+				txHash: txResponse.hash
+			})
 
-				const receipt = await txResponse.wait()
-				if (receipt?.status === 0) {
-					throw new Error('Transaction reverted')
-				}
+			if (txResponse.receipt?.status === 0) {
+				throw new Error('Transaction reverted', { cause: txResponse.receipt })
+			}
 
 				await txService.createTransaction({
 					chainId,
 					contractAddress,
 					abi: erc20Abi,
 					data: tx.data,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					isDeployTx: false,
 					args: [spender, amount],
 					functionName: 'approve'
 				})
 
-				return reply.code(200).send({
-					result: {
-						txHash: txResponse.hash,
-						txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
-						txSimulationUrl: tenderlyUrl ?? null
-					}
-				})
+			return reply.code(200).send({
+				result: {
+					txHash: txHash,
+					txUrl: getBlockExplorerUrl(Number(chainId), txHash),
+					txSimulationUrl: tenderlyUrl ?? null
+				}
+			})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)

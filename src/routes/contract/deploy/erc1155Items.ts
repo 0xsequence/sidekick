@@ -1,4 +1,4 @@
-import type { TransactionReceipt, TransactionResponse } from 'ethers'
+import type { TransactionReceipt } from 'ethers'
 import type { FastifyInstance } from 'fastify'
 import { encodeDeployData, encodeFunctionData, numberToHex, pad, zeroAddress } from 'viem'
 import { erc1155ItemsAbi } from '~/constants/abis/erc1155Items'
@@ -11,6 +11,7 @@ import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
 import { extractTxHashFromErrorReceipt, getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
+import type { TransactionResponse } from '~/types/general'
 
 type ERC1155ItemsDeployRequestBody = {
 	owner: string
@@ -21,6 +22,7 @@ type ERC1155ItemsDeployRequestBody = {
 	royaltyFeeNumerator: string
 	implicitModeValidator: string | undefined | null
 	implicitModeProjectId: string | undefined | null
+	waitForReceipt?: boolean
 }
 
 type ERC1155ItemsDeployRequestParams = {
@@ -51,9 +53,7 @@ const ERC1155ItemsDeploySchema = {
 			'tokenBaseURI',
 			'tokenContractURI',
 			'royaltyReceiver',
-			'royaltyFeeNumerator',
-			'implicitModeValidator',
-			'implicitModeProjectId'
+			'royaltyFeeNumerator'
 		],
 		properties: {
 			owner: { type: 'string', description: 'Address of the contract owner' },
@@ -83,7 +83,8 @@ const ERC1155ItemsDeploySchema = {
 				type: 'string',
 				description: 'Implicit mode project ID',
 				nullable: true
-			}	
+			},
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -140,16 +141,17 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 			const { chainId } = request.params
 
 			try {
-				const {
-					owner,
-					tokenName,
-					tokenBaseURI,
-					tokenContractURI,
-					royaltyReceiver,
-					royaltyFeeNumerator,
-					implicitModeValidator,
-					implicitModeProjectId
-				} = request.body
+			const {
+				owner,
+				tokenName,
+				tokenBaseURI,
+				tokenContractURI,
+				royaltyReceiver,
+				royaltyFeeNumerator,
+				implicitModeValidator,
+				implicitModeProjectId,
+				waitForReceipt
+			} = request.body
 
 				logStep(request, 'Getting tx signer', { chainId })
 				const signer = await getSigner(chainId)
@@ -176,55 +178,49 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 					data: deployData
 				}
 
-				logStep(request, 'Sending deployment transaction')
-				const deployTx: TransactionResponse = await signer.sendTransaction({
-					data: deployData
-				})
-				deploymentTxHash = deployTx.hash
-				logStep(request, 'Deployment transaction sent', { deployTx })
+			const {
+				simulationData: deploymentSimulationData,
+				signedTx: deploymentSignedTx
+			} = await prepareTransactionsForTenderlySimulation(
+				signer,
+				[deploymentTx],
+				Number(chainId)
+			)
+			const deploymentSimulationUrl = getTenderlySimulationUrl({
+				chainId: chainId,
+				gas: 3000000,
+				block: await signer.provider.getBlockNumber(),
+				contractAddress: deploymentSignedTx.entrypoint,
+				blockIndex: 0,
+				rawFunctionInput: deploymentSimulationData
+			})
 
-				const {
-					simulationData: deploymentSimulationData,
-					signedTx: deploymentSignedTx
-				} = await prepareTransactionsForTenderlySimulation(
-					signer,
-					[deploymentTx],
-					Number(chainId)
+			logStep(request, 'Sending deployment transaction')
+			const deployTx: TransactionResponse = await signer.sendTransaction({
+				data: deployData
+			}, {waitForReceipt: true})
+			deploymentTxHash = deployTx.hash
+			logStep(request, 'Deployment transaction sent', { deployTx })
+
+			if (deployTx.receipt?.status === 0) {
+				logError(
+					request,
+					new Error('Contract deployment transaction reverted'),
+					{ deployReceipt: deployTx.receipt }
 				)
-				const deploymentSimulationUrl = getTenderlySimulationUrl({
-					chainId: chainId,
-					gas: 3000000,
-					block: await signer.provider.getBlockNumber(),
-					contractAddress: deploymentSignedTx.entrypoint,
-					blockIndex: 0,
-					rawFunctionInput: deploymentSimulationData
-				})
+				throw new Error('Transaction reverted', { cause: deployTx.receipt })
+			}
 
-				logStep(request, 'Waiting for deployment receipt', {
-					txHash: deployTx.hash
-				})
-				const deployReceipt: TransactionReceipt | null = await deployTx.wait()
-				logStep(request, 'Deployment receipt received', { deployReceipt })
-
-				const deployedContractAddress = getContractAddressFromEvent(
-					deployReceipt,
-					'CreatedContract(address)'
-				)
-
-				if (deployReceipt?.status === 0) {
-					logError(
-						request,
-						new Error('Contract deployment transaction reverted'),
-						{ deployReceipt }
-					)
-					throw new Error('Contract deployment transaction reverted')
-				}
+			const deployedContractAddress = getContractAddressFromEvent(
+				deployTx.receipt,
+				'CreatedContract(address)'
+			)
 
 				if (!deployedContractAddress) {
 					logError(
 						request,
 						new Error('Contract address not found after deployment'),
-						{ deployReceipt }
+						{ deployTx }
 					)
 					throw new Error('Contract address not found after deployment')
 				}
@@ -235,7 +231,7 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 					contractAddress: deployedContractAddress,
 					abi: erc1155ItemsAbi,
 					data: deployData,
-					txHash: deployReceipt?.hash ?? '',
+					txHash: deploymentTxHash,
 					isDeployTx: true
 				})
 
@@ -289,27 +285,19 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 					rawFunctionInput: initializationSimulationData
 				})
 
-				logStep(request, 'Sending initialization transaction')
-				const initializeTx = await signer.sendTransaction(initializationTx)
-				initializationTxHash = initializeTx.hash
-				logStep(request, 'Initialization transaction sent')
+			logStep(request, 'Sending initialization transaction')
+			const initializeTx = await signer.sendTransaction(initializationTx, {waitForReceipt: true})
+			initializationTxHash = initializeTx.hash
+			logStep(request, 'Initialization transaction sent')
 
-				logStep(request, 'Waiting for initialization receipt', {
-					txHash: initializeTx.hash
-				})
-				const initializeReceipt = await initializeTx.wait()
-				logStep(request, 'Initialization receipt received', {
-					initializeReceipt
-				})
-
-				if (initializeReceipt?.status === 0) {
-					logError(
-						request,
-						new Error('Contract initialization transaction reverted'),
-						{ initializeReceipt }
-					)
-					throw new Error('Contract initialization transaction reverted')
-				}
+			if (initializeTx.receipt?.status === 0) {
+				logError(
+					request,
+					new Error('Contract initialization transaction reverted'),
+					{ initializeReceipt: initializeTx.receipt }
+				)
+				throw new Error('Transaction reverted', { cause: initializeTx.receipt })
+			}
 
 				logStep(request, 'Creating transaction record in db')
 				await txService.createTransaction({
@@ -317,31 +305,31 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 					contractAddress: deployedContractAddress,
 					abi: erc1155ItemsAbi,
 					data: initializeData,
-					txHash: initializeReceipt?.hash ?? '',
+					txHash: initializationTxHash,
 					isDeployTx: false
 				})
 
 				logStep(request, 'Deploy and initialize success')
 
-				return reply.code(200).send({
-					result: {
-						deploymentTxHash: deployReceipt?.hash ?? null,
-						deploymentTxUrl: getBlockExplorerUrl(
-							Number(chainId),
-							deployReceipt?.hash ?? ''
-						),
-						initializationTxHash: initializeReceipt?.hash ?? null,
-						initializationTxUrl: getBlockExplorerUrl(
-							Number(chainId),
-							initializeReceipt?.hash ?? ''
-						),
-						deployedContractAddress: deployedContractAddress,
-						txSimulationUrls: [
-							deploymentSimulationUrl,
-							initializationSimulationUrl
-						]
-					}
-				})
+			return reply.code(200).send({
+				result: {
+					deploymentTxHash: deploymentTxHash,
+					deploymentTxUrl: getBlockExplorerUrl(
+						Number(chainId),
+						deploymentTxHash
+					),
+					initializationTxHash: initializationTxHash,
+					initializationTxUrl: getBlockExplorerUrl(
+						Number(chainId),
+						initializationTxHash
+					),
+					deployedContractAddress: deployedContractAddress,
+					txSimulationUrls: [
+						deploymentSimulationUrl,
+						initializationSimulationUrl
+					]
+				}
+			})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)

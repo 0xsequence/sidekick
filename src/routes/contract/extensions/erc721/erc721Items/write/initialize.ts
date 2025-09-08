@@ -10,6 +10,7 @@ import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
 import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
+import type { TransactionResponse } from '~/types/general'
 
 type ERC721ItemsInitializeRequestBody = {
 	owner: string
@@ -21,6 +22,7 @@ type ERC721ItemsInitializeRequestBody = {
 	royaltyFeeNumerator: string
 	implicitModeValidator: string | undefined | null
 	implicitModeProjectId: string | undefined | null
+	waitForReceipt?: boolean
 }
 
 type ERC721ItemsInitializeRequestParams = {
@@ -90,7 +92,8 @@ const ERC721ItemsInitializeSchema = {
 				type: 'string',
 				description: 'Implicit mode project ID',
 				nullable: true
-			}
+			},
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	headers: {
@@ -156,7 +159,8 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 					royaltyReceiver,
 					royaltyFeeNumerator,
 					implicitModeValidator,
-					implicitModeProjectId
+					implicitModeProjectId,
+					waitForReceipt
 				} = request.body
 
 				const signer = await getSigner(chainId)
@@ -213,21 +217,16 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 				})
 
 				logStep(request, 'Sending initialize transaction...')
-				const txResponse = await signer.sendTransaction({
+				console.log('waitForReceipt', waitForReceipt)
+				const txResponse: TransactionResponse = await signer.sendTransaction({
 					to: contractAddress,
 					data: initializeData
-				})
+				}, {waitForReceipt: waitForReceipt ?? false})
 				txHash = txResponse.hash
 				logStep(request, 'Initialize transaction sent', { txResponse })
 
-				const receipt = await txResponse.wait()
-				logStep(request, 'Initialize transaction mined', { receipt })
-
-				if (receipt?.status === 0) {
-					logError(request, new Error('Initialize transaction reverted'), {
-						receipt
-					})
-					throw new Error('Initialize transaction reverted')
+				if (txResponse.receipt?.status === 0) {
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
 				}
 
 				await txService.createTransaction({
@@ -235,7 +234,7 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 					contractAddress,
 					abi: erc721ItemsAbi,
 					data: initializeData,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					functionName: 'initialize',
 					args: [
 						owner,
@@ -253,12 +252,12 @@ export async function erc721ItemsInitialize(fastify: FastifyInstance) {
 				logStep(request, 'Transaction record created in db')
 
 				logStep(request, 'Initialize transaction success', {
-					txHash: receipt?.hash
+					txHash: txHash
 				})
 				return reply.code(200).send({
 					result: {
-						txHash: receipt?.hash ?? null,
-						txUrl: getBlockExplorerUrl(Number(chainId), receipt?.hash ?? ''),
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
 						txSimulationUrl: tenderlyUrl ?? null
 					}
 				})

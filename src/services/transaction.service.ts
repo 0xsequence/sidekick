@@ -48,7 +48,7 @@ export class TransactionService {
 			}
 		})
 
-		this.fastify.log.info('Transaction added to db', { txHash: params.txHash })
+		this.fastify.log.info(`Transaction added to db: ${params.txHash}`)
 
 		return pendingTx
 	}

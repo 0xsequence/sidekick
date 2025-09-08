@@ -85,6 +85,18 @@ const GetJobsSchema = {
 					}
 				}
 			}
+		},
+		500: {
+			type: 'object',
+			properties: {
+				error: { type: 'string' }
+			}
+		},
+		404: {
+			type: 'object',
+			properties: {
+				error: { type: 'string' }
+			}
 		}
 	}
 }
@@ -116,6 +128,18 @@ const GetJobSchema = {
 						opts: { type: 'object' }
 					}
 				}
+			}
+		},
+		500: {
+			type: 'object',
+			properties: {
+				error: { type: 'string' }
+			}
+		},
+		404: {
+			type: 'object',
+			properties: {
+				error: { type: 'string' }
 			}
 		}
 	}

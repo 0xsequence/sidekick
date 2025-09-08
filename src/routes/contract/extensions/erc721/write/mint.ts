@@ -1,6 +1,6 @@
-import type { TransactionResponse } from 'ethers'
-import { ethers } from 'ethers'
 import type { FastifyInstance } from 'fastify'
+
+import { ethers } from 'ethers'
 import { erc721Abi } from '~/constants/abis/erc721'
 import {
 	getTenderlySimulationUrl,
@@ -10,10 +10,12 @@ import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
 import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
+import type { TransactionResponse } from '~/types/general'
 
 type ERC721MintRequestBody = {
 	to: string
 	tokenId: string
+	waitForReceipt?: boolean
 }
 
 type ERC721MintRequestParams = {
@@ -37,7 +39,8 @@ const ERC721MintSchema = {
 		required: ['to', 'tokenId'],
 		properties: {
 			to: { type: 'string' },
-			tokenId: { type: 'string' }
+			tokenId: { type: 'string' },
+			waitForReceipt: { type: 'boolean', nullable: true }
 		}
 	},
 	params: {
@@ -103,7 +106,7 @@ export async function erc721Mint(fastify: FastifyInstance) {
 			const { chainId, contractAddress } = request.params
 
 			try {
-				const { to, tokenId } = request.body
+				const { to, tokenId, waitForReceipt } = request.body
 
 				const signer = await getSigner(chainId)
 				logStep(request, 'Tx signer received', {
@@ -141,15 +144,13 @@ export async function erc721Mint(fastify: FastifyInstance) {
 
 				const txService = new TransactionService(fastify)
 
-				logStep(request, 'Sending transaction...')
-				const txResponse: TransactionResponse = await signer.sendTransaction(tx)
+				logStep(request, 'Sending mint transaction...')
+				const txResponse: TransactionResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
 				txHash = txResponse.hash
-				logStep(request, 'Transaction sent', { txResponse })
+				logStep(request, 'Mint transaction sent', { txResponse })
 
-				const receipt = await txResponse.wait()
-
-				if (receipt?.status === 0) {
-					throw new Error('Transaction reverted')
+				if (txResponse.receipt?.status === 0) {
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
 				}
 
 				await txService.createTransaction({
@@ -157,17 +158,19 @@ export async function erc721Mint(fastify: FastifyInstance) {
 					contractAddress,
 					abi: erc721Abi,
 					data: tx.data,
-					txHash: receipt?.hash ?? '',
+					txHash: txHash,
 					isDeployTx: false,
 					args: [to, tokenId],
 					functionName: 'mint'
 				})
 
-				logStep(request, 'Transaction success', { txResponse })
+				logStep(request, 'Mint transaction success', {
+					txHash: txHash
+				})
 				return reply.code(200).send({
 					result: {
-						txHash: txResponse.hash,
-						txUrl: getBlockExplorerUrl(Number(chainId), txResponse.hash),
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
 						txSimulationUrl: tenderlyUrl ?? null
 					}
 				})
