@@ -63,7 +63,7 @@ module "load_balancer" {
 
   # ALB Variables
   alb_name     = "sidekick-alb"
-  alb_internal = true
+  alb_internal = false
   alb_type     = "application"
   alb_sg       = module.security_groups.alb_sg_id
   alb_sb_1     = module.network.alb_subnet_1
