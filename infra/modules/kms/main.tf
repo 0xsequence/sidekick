@@ -2,40 +2,16 @@
 resource "aws_secretsmanager_secret" "redis_credentials" {
   name        = var.redis_sm_name
   description = "Credentials for Sidekick Redis cluster"
-
-  tags = {
-    Name      = "SidekickRedisCredentials"
-    Env       = "Infra"
-    AWSRegion = "us-west-2"
-    Owner     = "DevGameServices"
-    Role      = "RedisCredentials"
-  }
 }
 
 resource "aws_secretsmanager_secret" "postgres_credentials" {
   name        = var.pg_sm_name
   description = "Credentials for Sidekick PostgreSQL database"
-
-  tags = {
-    Name      = "SidekickPostgresCredentials"
-    Env       = "Infra"
-    AWSRegion = "us-west-2"
-    Owner     = "DevGameServices"
-    Role      = "PostgresCredentials"
-  }
 }
 
 resource "aws_secretsmanager_secret" "app_credentials" {
   name        = var.app_sm_name
   description = "Credentials for Sidekick App"
-
-  tags = {
-    Name      = "SidekickAppCredentials"
-    Env       = "Infra"
-    AWSRegion = "us-west-2"
-    Owner     = "DevGameServices"
-    Role      = "ApplicationCredentials"
-  }
 }
 
 # Secret Data *****************************************************************

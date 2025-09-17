@@ -4,14 +4,6 @@ resource "aws_ecs_cluster" "sidekick_cluster" {
     name  = var.ecs_settings_name
     value = var.ecs_settings_value
   }
-
-  tags = {
-    Name      = "SidekickECSCluster"
-    Env       = "Infra"
-    AWSRegion = "us-west-2"
-    Owner     = "DevGameServices"
-    Role      = "ECSCluster"
-  }
 }
 
 resource "aws_ecs_task_definition" "sidekick_task" {
@@ -23,14 +15,6 @@ resource "aws_ecs_task_definition" "sidekick_task" {
   execution_role_arn       = var.ecs_task_execution_role_arn
   task_role_arn            = var.ecs_task_role_arn
   depends_on               = [var.ecs_task_depends_on]
-
-  tags = {
-    Name      = "SidekickECSTaskDefinition"
-    Env       = "Infra"
-    AWSRegion = "us-west-2"
-    Owner     = "DevGameServices"
-    Role      = "ECSTaskDefinition"
-  }
 
   container_definitions = jsonencode([{
     name      = var.ecs_task_definition_name
@@ -62,14 +46,6 @@ resource "aws_ecs_service" "sidekick_service" {
   task_definition = aws_ecs_task_definition.sidekick_task.arn
   desired_count   = var.ecs_service_desired_Count
   launch_type     = var.ecs_service_launch_type
-
-  tags = {
-    Name      = "SidekickECSService"
-    Env       = "Infra"
-    AWSRegion = "us-west-2"
-    Owner     = "DevGameServices"
-    Role      = "ECSService"
-  }
 
   network_configuration {
     subnets         = var.ecs_service_network_subnets

@@ -22,12 +22,4 @@ resource "aws_db_instance" "sidekick_postgres" {
 
   parameter_group_name = var.rds_parameter_group_name
   skip_final_snapshot  = var.rds_skip_final_snapshot
-
-  tags = {
-    Name      = "SidekickPostgresDB"
-    Env       = "Infra"
-    AWSRegion = "us-west-2"
-    Owner     = "DevGameServices"
-    Role      = "DatabaseServer"
-  }
 }
