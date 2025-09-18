@@ -36,6 +36,8 @@ module "security_groups" {
 
   alb_sg_name   = "sidekick-alb-sg"
   alb_sg_vpc_id = module.network.vpc_id
+
+  alb_sg_pragma_cidr = "10.102.0.0/16"
 }
 
 # KMS **************************************************************
