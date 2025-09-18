@@ -10,3 +10,5 @@ variable "alb_subnet_2_cidr" {}
 variable "alb_subnet_2_az" {}
 variable "public_nat_cidr" {}
 variable "public_nat_az" {}
+variable "aws_route_pragma_peer_id" {}
+variable "aws_route_pragma_peer_cidr" {}
