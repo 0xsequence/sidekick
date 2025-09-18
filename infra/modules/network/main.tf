@@ -216,15 +216,16 @@ resource "aws_db_subnet_group" "sidekick_postgres" {
 }
 
 # Pragma VPC Route Tables ***********************************************************
-# Pragma VPC Route Tables ***********************************************************
-resource "aws_route" "pragma_peering_public" {
-  route_table_id            = aws_route_table.public.id
-  destination_cidr_block    = "10.104.0.0/16"  
-  vpc_peering_connection_id = "pcx-04eb120b96607750d"  
-}
+# # TODO: peer with pramgma in dev
 
-resource "aws_route" "pragma_peering_private" {
-  route_table_id            = aws_route_table.private.id
-  destination_cidr_block    = "10.104.0.0/16"  
-  vpc_peering_connection_id = "pcx-04eb120b96607750d" 
-}
+# resource "aws_route" "pragma_peering_private" {
+#   route_table_id            = aws_route_table.private.id
+#   destination_cidr_block    = "10.104.0.0/16"
+#   vpc_peering_connection_id = "pcx-04eb120b96607750d"
+# }
+
+# resource "aws_route" "sidekick_peering" {
+#   route_table_id            = "their-route-table-id"
+#   destination_cidr_block    = "10.0.0.0/16"  # Your VPC
+#   vpc_peering_connection_id = "pcx-04eb120b96607750d"
+# }
