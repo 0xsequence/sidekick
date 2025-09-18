@@ -1,2 +1,2 @@
-vpc_peering_connection_cidr = "10.102.0.0/16"
-vpc_peering_connection_id = "pcx-0f4e3f97321bc79dc"
+vpc_peering_connection_cidrs = ["10.102.0.0/16",           "10.101.0.0/16",           "10.103.0.0/16"        ]
+vpc_peering_connection_ids   = ["pcx-0f4e3f97321bc79dc",   "pcx-07e19fe566f7097ef",   "pcx-09e4e3b2653381edf"]

@@ -13,8 +13,8 @@ module "network" {
   alb_subnet_2_az       = "us-west-2b"
   public_nat_cidr       = "10.0.5.0/24"
   public_nat_az         = "us-west-2a"
-  aws_route_pragma_peer_cidr  = var.vpc_peering_connection_cidr
-  aws_route_pragma_peer_id  = var.vpc_peering_connection_id
+  aws_route_pragma_peer_cidrs  = var.vpc_peering_connection_cidrs
+  aws_route_pragma_peer_ids  = var.vpc_peering_connection_ids
 }
 
 # Security Groups ************************************************
@@ -39,7 +39,7 @@ module "security_groups" {
   alb_sg_name   = "sidekick-alb-sg"
   alb_sg_vpc_id = module.network.vpc_id
 
-  alb_sg_pragma_cidr = var.vpc_peering_connection_cidr
+  aws_route_pragma_peer_cidrs = var.vpc_peering_connection_cidrs
 }
 
 # KMS **************************************************************

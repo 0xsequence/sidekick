@@ -14,4 +14,6 @@ variable "ecs_service_sg_port" {}
 
 variable "alb_sg_name" {}
 variable "alb_sg_vpc_id" {}
-variable "alb_sg_pragma_cidr" {}
+variable "aws_route_pragma_peer_cidrs" {
+  type        = list(string)
+}

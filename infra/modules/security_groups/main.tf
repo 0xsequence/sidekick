@@ -71,7 +71,7 @@ resource "aws_security_group" "ecs_service_sg" {
     from_port   = var.ecs_service_sg_port
     to_port     = var.ecs_service_sg_port
     protocol    = "tcp"
-    cidr_blocks = ["10.104.0.0/16"] 
+    cidr_blocks = concat(var.aws_route_pragma_peer_cidrs)
     description = "Allow traffic from Pragma VPC"
   }
 
@@ -107,21 +107,21 @@ resource "aws_security_group" "alb_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["88.216.233.161/32", var.alb_sg_pragma_cidr]
+    cidr_blocks = concat(["88.216.233.161/32"], var.aws_route_pragma_peer_cidrs)
   }
 
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["88.216.233.161/32", var.alb_sg_pragma_cidr]
+    cidr_blocks = concat(["88.216.233.161/32"], var.aws_route_pragma_peer_cidrs)
   }
 
   ingress {
     from_port   = 7500
     to_port     = 7500
     protocol    = "tcp"
-    cidr_blocks = ["88.216.233.161/32", var.alb_sg_pragma_cidr] 
+    cidr_blocks = concat(["88.216.233.161/32"], var.aws_route_pragma_peer_cidrs)
   }
 
   egress {
