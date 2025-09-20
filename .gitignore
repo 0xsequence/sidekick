@@ -193,3 +193,6 @@ src/lib/generated/
 *.tfstate.backup
 .terraform/
 *.terraform.lock.hcl
+
+# 
+.*Zone.Identifier
