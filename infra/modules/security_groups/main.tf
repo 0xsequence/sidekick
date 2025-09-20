@@ -68,14 +68,6 @@ resource "aws_security_group" "ecs_service_sg" {
   }
 
   ingress {
-    from_port   = var.ecs_service_sg_port
-    to_port     = var.ecs_service_sg_port
-    protocol    = "tcp"
-    cidr_blocks = concat(var.aws_route_pragma_peer_cidrs)
-    description = "Allow traffic from Pragma VPC"
-  }
-
-  ingress {
     from_port       = var.ecs_service_sg_port
     to_port         = var.ecs_service_sg_port
     protocol        = "tcp"
