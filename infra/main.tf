@@ -217,6 +217,11 @@ module "ecs" {
     { name = "ETHERSCAN_API_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["ETHERSCAN_API_KEY"] },
     { name = "VERIFY_CONTRACT_ON_DEPLOY", value = jsondecode(module.kms.app_credentials_secret_string)["VERIFY_CONTRACT_ON_DEPLOY"] },
 
+    # Tenderly Simulation
+    { name = "TENDERLY_PROJECT_SLUG", value = jsondecode(module.kms.app_credentials_secret_string)["TENDERLY_PROJECT_SLUG"] },
+    { name = "TENDERLY_ACCOUNT_SLUG", value = jsondecode(module.kms.app_credentials_secret_string)["TENDERLY_ACCOUNT_SLUG"] },
+    { name = "TENDERLY_ACCESS_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["TENDERLY_ACCESS_KEY"] },
+
     # Google KMS (alternative signer, if needed)
     { name = "PROJECT", value = jsondecode(module.kms.app_credentials_secret_string)["PROJECT"] },
     { name = "LOCATION", value = jsondecode(module.kms.app_credentials_secret_string)["LOCATION"] },
