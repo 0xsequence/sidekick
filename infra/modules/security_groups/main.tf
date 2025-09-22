@@ -15,7 +15,7 @@ resource "aws_security_group" "redis_sg" {
     from_port   = var.redis_sg_port
     to_port     = var.redis_sg_port
     protocol    = "tcp"
-    cidr_blocks = [var.redis_sg_vpc_cidr] # Pragma VPC Added
+    cidr_blocks = [var.redis_sg_vpc_cidr]
   }
 
   egress {
@@ -43,7 +43,7 @@ resource "aws_security_group" "postgres_sg" {
     from_port   = var.postgres_sg_port
     to_port     = var.postgres_sg_port
     protocol    = "tcp"
-    cidr_blocks = [var.postgres_sg_vpc_cidr] # Pragma VPC Added
+    cidr_blocks = [var.postgres_sg_vpc_cidr]
   }
 
   egress {
@@ -67,11 +67,20 @@ resource "aws_security_group" "ecs_service_sg" {
     Role      = "ECSServiceSecurity"
   }
 
+    # Allow from Public ALB
   ingress {
     from_port       = var.ecs_service_sg_port
     to_port         = var.ecs_service_sg_port
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  # Allow from Internal ALB
+  ingress {
+    from_port       = var.ecs_service_sg_port
+    to_port         = var.ecs_service_sg_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_internal_sg.id]
   }
 
   egress {
@@ -99,21 +108,21 @@ resource "aws_security_group" "alb_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = concat(["88.216.233.161/32"], var.aws_route_pragma_peer_cidrs)
+    cidr_blocks = ["88.216.233.161/32"]
   }
 
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = concat(["88.216.233.161/32"], var.aws_route_pragma_peer_cidrs)
+    cidr_blocks = ["88.216.233.161/32"]
   }
 
   ingress {
     from_port   = 7500
     to_port     = 7500
     protocol    = "tcp"
-    cidr_blocks = concat(["88.216.233.161/32"], var.aws_route_pragma_peer_cidrs)
+    cidr_blocks = ["88.216.233.161/32"]
   }
 
   egress {
@@ -123,3 +132,48 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+
+resource "aws_security_group" "alb_internal_sg" {
+  name        = var.alb_internal_sg_name
+  description = "Security group for Sidekick Internal ALB (VPC peering only)"
+  vpc_id      = var.alb_internal_sg_vpc_id
+
+  tags = {
+    Name      = "SidekickALBInternalSG"
+    Env       = "Infra"
+    AWSRegion = "us-west-2"
+    Owner     = "DevGameServices"
+    Role      = "ALBInternalSecurity"
+  }
+
+  # Only allow from Pragma VPCs (no public IP)
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = var.aws_route_pragma_peer_cidrs
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = var.aws_route_pragma_peer_cidrs
+  }
+
+  ingress {
+    from_port   = 7500
+    to_port     = 7500
+    protocol    = "tcp"
+    cidr_blocks = var.aws_route_pragma_peer_cidrs
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+

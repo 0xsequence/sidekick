@@ -17,3 +17,6 @@ variable "alb_sg_vpc_id" {}
 variable "aws_route_pragma_peer_cidrs" {
   type        = list(string)
 }
+
+variable "alb_internal_sg_name" {}
+variable "alb_internal_sg_vpc_id" {}

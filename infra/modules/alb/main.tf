@@ -15,6 +15,23 @@ resource "aws_lb" "sidekick_alb" {
   }
 }
 
+resource "aws_lb" "sidekick_alb_internal" {
+  name                       = var.alb_internal_name
+  internal                   = var.alb_internal_var
+  load_balancer_type         = var.alb_internal_type
+  security_groups            = [var.alb_internal_sg]
+  subnets                    = [var.alb_internal_sb_1, var.alb_internal_sb_2]
+  enable_deletion_protection = false
+
+  tags = {
+    Name      = "SidekickALB"
+    Env       = "Infra"
+    AWSRegion = "us-west-2"
+    Owner     = "DevGameServices"
+    Role      = "ApplicationLoadBalancer"
+  }
+}
+
 resource "aws_lb_target_group" "sidekick_tg" {
   name        = var.alb_target_group_name
   port        = var.alb_target_group_port
@@ -40,8 +57,52 @@ resource "aws_lb_target_group" "sidekick_tg" {
   }
 }
 
+resource "aws_lb_target_group" "sidekick_tg_internal" {
+  name        = "${var.alb_target_group_name}-internal"
+  port        = var.alb_target_group_port
+  protocol    = var.alb_target_group_protocol
+  target_type = var.alb_target_group_type
+  vpc_id      = var.alb_target_group_vpc_id
+
+  health_check {
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 10
+    path                = "/"
+    matcher             = "200-399"
+  }
+
+  tags = {
+    Name      = "SidekickTargetGroup-Internal"
+    Env       = "Infra"
+    AWSRegion = "us-west-2"
+    Owner     = "DevGameServices"
+    Role      = "ALBTargetGroup-Internal"
+  }
+}
+
 resource "aws_lb_listener" "sidekick_http" {
   load_balancer_arn = aws_lb.sidekick_alb.arn
+  port              = var.alb_listener_port
+  protocol          = var.alb_listener_protocol
+
+  default_action {
+    type             = var.alb_listener_type
+    target_group_arn = aws_lb_target_group.sidekick_tg_internal.arn
+  }
+
+  tags = {
+    Name      = "SidekickHTTPListener"
+    Env       = "Infra"
+    AWSRegion = "us-west-2"
+    Owner     = "DevGameServices"
+    Role      = "ALBHTTPListener"
+  }
+}
+
+resource "aws_lb_listener" "sidekick_http_internal" {
+  load_balancer_arn = aws_lb.sidekick_alb_internal.arn
   port              = var.alb_listener_port
   protocol          = var.alb_listener_protocol
 

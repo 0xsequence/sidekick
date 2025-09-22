@@ -81,4 +81,11 @@ resource "aws_ecs_service" "sidekick_service" {
     container_name   = var.ecs_service_lb_container_name
     container_port   = var.ecs_service_lb_container_port
   }
+
+  load_balancer {
+    target_group_arn = var.ecs_service_lb_internal_target_group_arn
+    container_name   = var.ecs_service_lb_internal_container_name
+    container_port   = var.ecs_service_lb_internal_container_port
+  }
+
 }

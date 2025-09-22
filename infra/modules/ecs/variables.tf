@@ -42,3 +42,6 @@ variable "ecs_service_security_group" {}
 variable "ecs_service_lb_target_group_arn" {}
 variable "ecs_service_lb_container_name" {}
 variable "ecs_service_lb_container_port" {}
+variable "ecs_service_lb_internal_target_group_arn" {}
+variable "ecs_service_lb_internal_container_name" {}
+variable "ecs_service_lb_internal_container_port" {}

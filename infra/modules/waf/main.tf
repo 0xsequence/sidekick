@@ -33,9 +33,20 @@ resource "aws_wafv2_web_acl" "sidekick" {
     metric_name                = "sidekick-waf"
     sampled_requests_enabled   = true
   }
+
+  tags = {
+    Name      = "SidekickWAF"
+    Env       = "Infra"
+    AWSRegion = "us-west-2"
+    Owner     = "DevGameServices"
+    Role      = "WAF"
+  }
 }
 
-resource "aws_wafv2_web_acl_association" "sidekick" {
-  resource_arn = var.waf_association_lb_arn
+# Multiple WAF associations - one for each ALB
+resource "aws_wafv2_web_acl_association" "sidekick_associations" {
+  count = length(var.waf_association_lb_arns)
+
+  resource_arn = var.waf_association_lb_arns[count.index]
   web_acl_arn  = aws_wafv2_web_acl.sidekick.arn
 }

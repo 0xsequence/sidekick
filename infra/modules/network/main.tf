@@ -42,7 +42,6 @@ resource "aws_subnet" "sidekick_private_subnet_2" {
   }
 }
 
-# For ALB (will be private after VPC peering)
 resource "aws_subnet" "alb_subnet_1" {
   vpc_id            = aws_vpc.sidekick_vpc.id
   cidr_block        = var.alb_subnet_1_cidr
@@ -216,6 +215,14 @@ resource "aws_db_subnet_group" "sidekick_postgres" {
 }
 
 # Pragma VPC Route Tables ****************************************************
+resource "aws_route" "pragma_peering_main" {
+  count = length(var.aws_route_pragma_peer_ids)
+
+  route_table_id            = aws_vpc.sidekick_vpc.main_route_table_id
+  destination_cidr_block    = var.aws_route_pragma_peer_cidrs[count.index]
+  vpc_peering_connection_id = var.aws_route_pragma_peer_ids[count.index]
+}
+
 resource "aws_route" "pragma_peering_public" {
   count = length(var.aws_route_pragma_peer_ids)
 

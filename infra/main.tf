@@ -36,8 +36,13 @@ module "security_groups" {
   ecs_service_sg_vpc_id = module.network.vpc_id
   ecs_service_sg_port   = 7500
 
+  # Public ALB SG
   alb_sg_name   = "sidekick-alb-sg"
   alb_sg_vpc_id = module.network.vpc_id
+
+  # Internal ALB SG
+  alb_internal_sg_name   = "sidekick-alb-internal-sg"
+  alb_internal_sg_vpc_id = module.network.vpc_id
 
   aws_route_pragma_peer_cidrs = var.vpc_peering_connection_cidrs
 }
@@ -54,10 +59,15 @@ module "kms" {
 # WAF ******************************************************************
 
 module "waf" {
-  source                 = "./modules/waf"
-  waf_name               = "sidekick-waf"
-  waf_scope              = "REGIONAL"
-  waf_association_lb_arn = module.load_balancer.alb_arn
+  source   = "./modules/waf"
+  waf_name = "sidekick-waf"
+  waf_scope = "REGIONAL"
+  
+  # Associate with both ALBs
+  waf_association_lb_arns = [
+    module.load_balancer.alb_arn,
+    module.load_balancer.alb_internal_arn 
+  ]
 }
 
 # Application Load Balancer ********************************************************************
@@ -84,6 +94,14 @@ module "load_balancer" {
   alb_listener_port     = "80"
   alb_listener_protocol = "HTTP"
   alb_listener_type     = "forward"
+
+    # Internal ALB Variables
+  alb_internal_name     = "sidekick-alb-internal"
+  alb_internal_var      = true
+  alb_internal_type     = "application"
+  alb_internal_sg       = module.security_groups.alb_internal_sg_id
+  alb_internal_sb_1     = module.network.private_subnet_id_1
+  alb_internal_sb_2     = module.network.private_subnet_id_2
 }
 
 # # Redis ElastiCache Cluster *****************************************************************
@@ -242,4 +260,7 @@ module "ecs" {
   ecs_service_lb_target_group_arn = module.load_balancer.lb_target_group_arn
   ecs_service_lb_container_name   = "sidekick-container"
   ecs_service_lb_container_port   = 7500
+  ecs_service_lb_internal_target_group_arn = module.load_balancer.lb_target_group_internal_arn
+  ecs_service_lb_internal_container_name   = "sidekick-container"
+  ecs_service_lb_internal_container_port   = 7500
 }
