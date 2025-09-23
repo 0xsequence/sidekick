@@ -100,8 +100,8 @@ module "load_balancer" {
   alb_internal_var      = true
   alb_internal_type     = "application"
   alb_internal_sg       = module.security_groups.alb_internal_sg_id
-  alb_internal_sb_1     = module.network.private_subnet_id_1
-  alb_internal_sb_2     = module.network.private_subnet_id_2
+  alb_internal_sb_1     = module.network.alb_subnet_1
+  alb_internal_sb_2     = module.network.alb_subnet_2
 }
 
 # # Redis ElastiCache Cluster *****************************************************************

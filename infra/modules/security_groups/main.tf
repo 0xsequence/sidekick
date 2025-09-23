@@ -15,7 +15,7 @@ resource "aws_security_group" "redis_sg" {
     from_port   = var.redis_sg_port
     to_port     = var.redis_sg_port
     protocol    = "tcp"
-    cidr_blocks = [var.redis_sg_vpc_cidr]
+    cidr_blocks = concat([var.redis_sg_vpc_cidr], var.aws_route_pragma_peer_cidrs)
   }
 
   egress {
@@ -43,7 +43,7 @@ resource "aws_security_group" "postgres_sg" {
     from_port   = var.postgres_sg_port
     to_port     = var.postgres_sg_port
     protocol    = "tcp"
-    cidr_blocks = [var.postgres_sg_vpc_cidr]
+    cidr_blocks = concat([var.postgres_sg_vpc_cidr], var.aws_route_pragma_peer_cidrs)
   }
 
   egress {
@@ -81,6 +81,20 @@ resource "aws_security_group" "ecs_service_sg" {
     to_port         = var.ecs_service_sg_port
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_internal_sg.id]
+  }
+
+  ingress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks =  ["10.0.0.0/16"]
+  }
+
+  ingress {
+    from_port   = var.ecs_service_sg_port
+    to_port     = var.ecs_service_sg_port
+    protocol    = "tcp"
+    cidr_blocks = var.aws_route_pragma_peer_cidrs
   }
 
   egress {
