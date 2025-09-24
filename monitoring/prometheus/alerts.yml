@@ -1,0 +1,16 @@
+groups:
+  - name: api-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code=~"5..",route!="/metrics"}[1m]))
+            /
+            sum(rate(http_requests_total{route!="/metrics"}[1m]))
+          ) > 0.01
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 1% for more than 1 minute (excluding /metrics)." 
