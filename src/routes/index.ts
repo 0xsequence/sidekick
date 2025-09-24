@@ -39,6 +39,7 @@ import { getAllContracts } from './contract/utils/get/getAllContracts'
 import { getContract } from './contract/utils/get/getContract'
 import { importContracts } from './contract/utils/importContracts/importContracts'
 import { isDeployed } from './contract/utils/isDeployed/isDeployed'
+import { getTxReceipt } from './contract/utils/relayer/getTxReceipt'
 import { verifyContract } from './contract/utils/verify/verify'
 import { writeContract } from './contract/write/write'
 import { cleanJobs } from './jobs/cleanJobs'
@@ -149,6 +150,9 @@ export default async function (fastify: FastifyInstance) {
 
 	// Register add contract route
 	addContract(fastify)
+
+	// Register relayer routes
+	getTxReceipt(fastify)
 
 	// Webhooks
 	addWebhook(fastify)

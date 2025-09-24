@@ -15,6 +15,33 @@ export const getProvider = async (chainConfig: NetworkConfig) => {
 	return provider
 }
 
+export const getRelayer = async (chainHandle: string) => {
+	try {
+		const chainConfig: NetworkConfig | undefined =
+			findSupportedNetwork(chainHandle)
+
+		if (!chainConfig) {
+			throw new Error(`Chain config not found for chain handle: ${chainHandle}`)
+		}
+
+		const provider = await getProvider(chainConfig)
+
+		const walletEOA = new ethers.Wallet(
+			process.env.BACKEND_WALLET_PV_KEY || getOrCreateDevKey(),
+			provider
+		)
+		const smartAccount = await Session.singleSigner({
+			signer: walletEOA,
+			projectAccessKey: process.env.SEQUENCE_PROJECT_ACCESS_KEY as string
+		})
+
+		return smartAccount.account.relayer(chainConfig.chainId)
+	} catch (err) {
+		logger.error(`Error getting local signer: ${err}`)
+		throw err
+	}
+}
+
 export const getLocalSigner = async (chainHandle: string) => {
 	try {
 		const chainConfig: NetworkConfig | undefined =
