@@ -15,3 +15,29 @@ export type TenderlySimulatorUrlOptions = {
 }
 
 export type TransactionResponse = commons.transaction.TransactionResponse
+
+export type TransactionReceipt = {
+	type: string
+	root: string
+	status: string
+	cumulativeGasUsed: string
+	logsBloom: string
+	logs: Array<{
+		address: string
+		topics: string[]
+		data: string
+		blockNumber: string
+		transactionHash: string
+		transactionIndex: string
+		blockHash: string
+		logIndex: string
+		removed: boolean
+	}>
+	transactionHash: string
+	contractAddress: string
+	gasUsed: string
+	effectiveGasPrice: string
+	blockHash: string
+	blockNumber: string
+	transactionIndex: string
+}
