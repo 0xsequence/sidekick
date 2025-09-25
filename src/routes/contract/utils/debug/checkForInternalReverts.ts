@@ -286,7 +286,8 @@ const generateSummary = (
 	}
 
 	const functionSignature =
-		deepestReverted.decodedFunctionSelector?.functionSignature || 'Unknown Function'
+		deepestReverted.decodedFunctionSelector?.functionSignature ||
+		'Unknown Function'
 	const revertReason = deepestReverted.revertReason || 'Unknown reason'
 
 	return `Function ${functionSignature}() reverted with reason "${revertReason}". Parameters used: ${deepestReverted.decodedFunctionSelector?.parameters.map((p) => `${p.value}`).join(', ')}`
@@ -348,8 +349,8 @@ export async function checkForInternalReverts(fastify: FastifyInstance) {
 
 				// Pass the provider into the transformation logic to enable contract name lookups.
 				const simplifiedTrace = await transformTrace(rawTrace, provider)
-                // turn into json string
-                const simplifiedTraceString = JSON.stringify(simplifiedTrace)
+				// turn into json string
+				const simplifiedTraceString = JSON.stringify(simplifiedTrace)
 				const revertedCalls = findRevertedCalls([simplifiedTrace])
 				const revertedReasons = Array.from(
 					new Set(
@@ -364,7 +365,7 @@ export async function checkForInternalReverts(fastify: FastifyInstance) {
 						hasRevertedCalls: revertedCalls.length > 0,
 						revertedReasons,
 						revertedCalls,
-                        summary
+						summary
 					}
 				})
 			} catch (error: any) {
