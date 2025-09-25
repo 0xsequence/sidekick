@@ -14,7 +14,11 @@ import {
 	verifyContract
 } from '~/utils/contractVerification'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
+import {
+	extractTxHashFromErrorReceipt,
+	getBlockExplorerUrl,
+	getContractAddressFromEvent
+} from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC20DeployRequestBody = {
@@ -108,7 +112,7 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 		async (request, reply) => {
 			logRequest(request)
 
-			let tenderlyUrl: string | null = null
+			const tenderlyUrl: string | null = null
 			let txHash: string | null = null
 			const { chainId } = request.params
 
@@ -154,14 +158,19 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 				})
 
 				logStep(request, 'Sending deploy transaction', { data })
-				const tx = await signer.sendTransaction({
-					data
-				}, {waitForReceipt: true})
+				const tx = await signer.sendTransaction(
+					{
+						data
+					},
+					{ waitForReceipt: true }
+				)
 				txHash = tx.hash
 				logStep(request, 'Deploy transaction sent', { tx })
 
 				if (tx.receipt?.status === 0) {
-					logError(request, new Error('Transaction reverted'), { receipt: tx.receipt })
+					logError(request, new Error('Transaction reverted'), {
+						receipt: tx.receipt
+					})
 					throw new Error('Transaction reverted', { cause: tx.receipt })
 				}
 
@@ -254,13 +263,13 @@ export async function erc20Deploy(fastify: FastifyInstance) {
 				})
 
 				const errorMessage =
-					error instanceof Error
-						? error.message
-						: 'Failed to deploy ERC20'
+					error instanceof Error ? error.message : 'Failed to deploy ERC20'
 				return reply.code(500).send({
 					result: {
 						txHash: finalTxHash,
-						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
+						txUrl: finalTxHash
+							? getBlockExplorerUrl(Number(chainId), finalTxHash)
+							: null,
 						txSimulationUrl: tenderlyUrl,
 						deployedContractAddress: null,
 						error: errorMessage

@@ -6,10 +6,13 @@ import {
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
-import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
-import { getSigner } from '~/utils/wallet'
 import type { TransactionResponse } from '~/types/general'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import {
+	extractTxHashFromErrorReceipt,
+	getBlockExplorerUrl
+} from '~/utils/other'
+import { getSigner } from '~/utils/wallet'
 
 type ERC721ItemsBatchBurnRequestBody = {
 	tokenIds: string[]
@@ -138,10 +141,13 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
 				})
 
 				logStep(request, 'Sending batchBurn transaction...')
-				const txResponse: TransactionResponse = await signer.sendTransaction({
-					to: contractAddress,
-					data: batchBurnData
-				}, {waitForReceipt: waitForReceipt ?? false})
+				const txResponse: TransactionResponse = await signer.sendTransaction(
+					{
+						to: contractAddress,
+						data: batchBurnData
+					},
+					{ waitForReceipt: waitForReceipt ?? false }
+				)
 				txHash = txResponse.hash
 				logStep(request, 'BatchBurn transaction sent', { txResponse })
 
@@ -175,13 +181,13 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)
 				const finalTxHash = txHash ?? errorTxHash
-				
+
 				logError(request, error, {
 					params: request.params,
 					body: request.body,
 					txHash: finalTxHash
 				})
-				
+
 				const errorMessage =
 					error instanceof Error
 						? error.message
@@ -189,7 +195,9 @@ export async function erc721ItemsBatchBurn(fastify: FastifyInstance) {
 				return reply.code(500).send({
 					result: {
 						txHash: finalTxHash,
-						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
+						txUrl: finalTxHash
+							? getBlockExplorerUrl(Number(chainId), finalTxHash)
+							: null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}

@@ -1,4 +1,4 @@
-import { commons } from "@0xsequence/core"
+import type { commons } from '@0xsequence/core'
 
 export type TenderlySimulatorUrlOptions = {
 	chainId: number | string

@@ -9,10 +9,13 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { AbiSchema } from '~/schemas/contractSchemas'
 import { TransactionService } from '~/services/transaction.service'
-import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
-import { getSigner } from '~/utils/wallet'
 import type { TransactionResponse } from '~/types/general'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import {
+	extractTxHashFromErrorReceipt,
+	getBlockExplorerUrl
+} from '~/utils/other'
+import { getSigner } from '~/utils/wallet'
 
 type WriteRequestBody = {
 	abi?: InterfaceAbi
@@ -55,7 +58,8 @@ const WriteContractSchema = {
 					'Contract ABI in JSON format. If not provided, the ABI will be fetched from the sidekick database, make sure the contract is added to the database first or pass the abi manually.'
 			},
 			waitForReceipt: {
-				type: 'boolean', nullable: true,
+				type: 'boolean',
+				nullable: true,
 				description: 'Whether to wait for the transaction receipt',
 				default: false
 			}
@@ -217,15 +221,18 @@ export async function writeContract(fastify: FastifyInstance) {
 				const txService = new TransactionService(fastify)
 
 				logStep(request, 'Sending contract transaction...')
-				const txResponse: TransactionResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
+				const txResponse: TransactionResponse = await signer.sendTransaction(
+					tx,
+					{ waitForReceipt: waitForReceipt ?? false }
+				)
 				txHash = txResponse.hash
 				logStep(request, 'Contract transaction sent', {
 					txHash: txResponse.hash
 				})
 
-			if (txResponse.receipt?.status === 0) {
-				throw new Error('Transaction reverted', { cause: txResponse.receipt })
-			}
+				if (txResponse.receipt?.status === 0) {
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
+				}
 
 				await txService.createTransaction({
 					chainId,
@@ -239,13 +246,13 @@ export async function writeContract(fastify: FastifyInstance) {
 					functionName: functionName
 				})
 
-			return reply.code(200).send({
-				result: {
-					txHash: txHash,
-					txUrl: getBlockExplorerUrl(Number(chainId), txHash),
-					txSimulationUrl: tenderlyUrl ?? null
-				}
-			})
+				return reply.code(200).send({
+					result: {
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
+						txSimulationUrl: tenderlyUrl ?? null
+					}
+				})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)
@@ -264,7 +271,9 @@ export async function writeContract(fastify: FastifyInstance) {
 				return reply.code(500).send({
 					result: {
 						txHash: finalTxHash,
-						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
+						txUrl: finalTxHash
+							? getBlockExplorerUrl(Number(chainId), finalTxHash)
+							: null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}

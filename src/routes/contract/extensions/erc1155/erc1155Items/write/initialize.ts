@@ -1,6 +1,12 @@
 import type { FastifyInstance } from 'fastify'
 
-import { type Abi, encodeFunctionData, numberToHex, pad, zeroAddress } from 'viem'
+import {
+	type Abi,
+	encodeFunctionData,
+	numberToHex,
+	pad,
+	zeroAddress
+} from 'viem'
 import { erc1155ItemsAbi } from '~/constants/abis/erc1155Items'
 import {
 	getTenderlySimulationUrl,
@@ -8,7 +14,10 @@ import {
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
 import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
+import {
+	extractTxHashFromErrorReceipt,
+	getBlockExplorerUrl
+} from '~/utils/other'
 import { getSigner } from '~/utils/wallet'
 
 type ERC1155ItemsInitializeRequestBody = {
@@ -141,22 +150,22 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 		async (request, reply) => {
 			logRequest(request)
 
-			let tenderlyUrl: string | null = null
+			const tenderlyUrl: string | null = null
 			let txHash: string | null = null
 			const { chainId, contractAddress } = request.params
 
 			try {
-			const {
-				owner,
-				tokenName,
-				tokenBaseURI,
-				tokenContractURI,
-				royaltyReceiver,
-				royaltyFeeNumerator,
-				implicitModeValidator,
-				implicitModeProjectId,
-				waitForReceipt
-			} = request.body
+				const {
+					owner,
+					tokenName,
+					tokenBaseURI,
+					tokenContractURI,
+					royaltyReceiver,
+					royaltyFeeNumerator,
+					implicitModeValidator,
+					implicitModeProjectId,
+					waitForReceipt
+				} = request.body
 
 				const signer = await getSigner(chainId)
 				if (!signer || !signer.account?.address) {
@@ -214,22 +223,24 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 					rawFunctionInput: simulationData
 				})
 
-			logStep(request, 'Sending initialize transaction...', {
-				contractAddress,
-				chainId
-			})
-			const txResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
-			txHash = txResponse.hash
-			logStep(request, 'Initialize transaction sent', {
-				txHash: txResponse.hash
-			})
-
-			if (txResponse.receipt?.status === 0) {
-				logError(request, new Error('Initialize transaction reverted'), {
-					txHash: txResponse.receipt?.hash
+				logStep(request, 'Sending initialize transaction...', {
+					contractAddress,
+					chainId
 				})
-				throw new Error('Transaction reverted', { cause: txResponse.receipt })
-			}
+				const txResponse = await signer.sendTransaction(tx, {
+					waitForReceipt: waitForReceipt ?? false
+				})
+				txHash = txResponse.hash
+				logStep(request, 'Initialize transaction sent', {
+					txHash: txResponse.hash
+				})
+
+				if (txResponse.receipt?.status === 0) {
+					logError(request, new Error('Initialize transaction reverted'), {
+						txHash: txResponse.receipt?.hash
+					})
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
+				}
 
 				await txService.createTransaction({
 					chainId,
@@ -277,7 +288,9 @@ export async function erc1155ItemsInitialize(fastify: FastifyInstance) {
 				return reply.code(500).send({
 					result: {
 						txHash: finalTxHash,
-						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
+						txUrl: finalTxHash
+							? getBlockExplorerUrl(Number(chainId), finalTxHash)
+							: null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}
