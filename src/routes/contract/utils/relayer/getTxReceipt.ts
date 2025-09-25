@@ -50,7 +50,7 @@ const getTxReceiptSchema = {
 		type: 'object',
 		properties: {
 			rpcUrl: { type: 'string', description: 'RPC URL for debug calls' },
-			debug: { type: 'boolean', description: 'Whether to debug' },
+			debug: { type: 'boolean', description: 'Whether to debug' }
 		}
 	},
 	response: {
