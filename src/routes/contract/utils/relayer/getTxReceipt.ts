@@ -8,7 +8,7 @@ type RawTraceDebugResponse = {
 	result: {
 		hasRevertedCalls: boolean
 		revertedCalls: any[]
-		revertedReasons: string[] | null
+		revertReasons: string[] | null
 		error?: string
 	}
 }
@@ -29,7 +29,7 @@ type GetTxReceiptResponse = {
 			receipt: TransactionReceipt | null
 			isSuccessful: boolean | null
 			hasRevertedCalls: boolean | null
-			revertedReasons: string[] | null
+			revertReasons: string[] | null
 			revertedCalls: any[] | null
 		}
 		error?: string
@@ -89,7 +89,7 @@ const getTxReceiptSchema = {
 					hasRevertedCalls: Type.Union([Type.Boolean(), Type.Null()]),
 					revertedCalls: Type.Union([Type.Array(Type.Any()), Type.Null()]),
 					isSuccessful: Type.Boolean(),
-					revertedReasons: Type.Union([Type.Array(Type.String()), Type.Null()])
+					revertReasons: Type.Union([Type.Array(Type.String()), Type.Null()])
 				}),
 				error: Type.Optional(Type.String())
 			})
@@ -158,7 +158,7 @@ export async function getTxReceipt(fastify: FastifyInstance) {
 								receipt.receipt?.status === 1,
 							hasRevertedCalls: debugData?.result.hasRevertedCalls || null,
 							revertedCalls: debugData?.result.revertedCalls || null,
-							revertedReasons: debugData?.result.revertedReasons || null
+							revertReasons: debugData?.result.revertReasons || null
 						}
 					}
 				})
@@ -171,7 +171,7 @@ export async function getTxReceipt(fastify: FastifyInstance) {
 							isSuccessful: null,
 							hasRevertedCalls: null,
 							revertedCalls: null,
-							revertedReasons: null
+							revertReasons: null
 						},
 						error:
 							error instanceof Error

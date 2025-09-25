@@ -45,7 +45,7 @@ type SimplifiedTraceCall = {
 type DebugCheckIfRevertedResponse = {
 	result: {
 		hasRevertedCalls: boolean
-		revertedReasons: string[]
+		revertReasons: string[]
 		revertedCalls: SimplifiedTraceCall[]
 		summary?: string
 		error?: string
@@ -92,7 +92,7 @@ const debugCheckIfRevertedSchema = {
 		200: Type.Object({
 			result: Type.Object({
 				hasRevertedCalls: Type.Boolean(),
-				revertedReasons: Type.Array(Type.String()),
+				revertReasons: Type.Array(Type.String()),
 				summary: Type.Optional(Type.String()),
 				revertedCalls: Type.Array(simplifiedTraceCallSchema),
 				error: Type.Optional(Type.String())
@@ -315,7 +315,7 @@ export async function checkForInternalReverts(fastify: FastifyInstance) {
 					return reply.code(400).send({
 						result: {
 							hasRevertedCalls: false,
-							revertedReasons: [],
+							revertReasons: [],
 							revertedCalls: [],
 							error: 'Invalid chain ID.'
 						}
@@ -324,7 +324,7 @@ export async function checkForInternalReverts(fastify: FastifyInstance) {
 					return reply.code(400).send({
 						result: {
 							hasRevertedCalls: false,
-							revertedReasons: [],
+							revertReasons: [],
 							revertedCalls: [],
 							error: 'Invalid transaction hash format.'
 						}
@@ -342,14 +342,14 @@ export async function checkForInternalReverts(fastify: FastifyInstance) {
 					return reply.code(200).send({
 						result: {
 							hasRevertedCalls: false,
-							revertedReasons: [],
+							revertReasons: [],
 							revertedCalls: []
 						}
 					})
 
 				const simplifiedTrace = await transformTrace(rawTrace, provider)
 				const revertedCalls = findRevertedCalls([simplifiedTrace])
-				const revertedReasons = Array.from(
+				const revertReasons = Array.from(
 					new Set(
 						revertedCalls.map((c) => c.revertReason).filter(Boolean) as string[]
 					)
@@ -360,7 +360,7 @@ export async function checkForInternalReverts(fastify: FastifyInstance) {
 				return reply.code(200).send({
 					result: {
 						hasRevertedCalls: revertedCalls.length > 0,
-						revertedReasons,
+						revertReasons,
 						revertedCalls,
 						summary
 					}
@@ -370,7 +370,7 @@ export async function checkForInternalReverts(fastify: FastifyInstance) {
 				return reply.code(500).send({
 					result: {
 						hasRevertedCalls: false,
-						revertedReasons: [],
+						revertReasons: [],
 						revertedCalls: [],
 						error: error.message
 					}
