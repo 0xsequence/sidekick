@@ -63,7 +63,7 @@ module "load_balancer" {
 
   # ALB Variables
   alb_name     = "sidekick-alb"
-  alb_internal = true
+  alb_internal = false
   alb_type     = "application"
   alb_sg       = module.security_groups.alb_sg_id
   alb_sb_1     = module.network.alb_subnet_1
@@ -212,6 +212,11 @@ module "ecs" {
     # Contract Verification
     { name = "ETHERSCAN_API_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["ETHERSCAN_API_KEY"] },
     { name = "VERIFY_CONTRACT_ON_DEPLOY", value = jsondecode(module.kms.app_credentials_secret_string)["VERIFY_CONTRACT_ON_DEPLOY"] },
+
+    # Tenderly Simulation
+    { name = "TENDERLY_PROJECT_SLUG", value = jsondecode(module.kms.app_credentials_secret_string)["TENDERLY_PROJECT_SLUG"] },
+    { name = "TENDERLY_ACCOUNT_SLUG", value = jsondecode(module.kms.app_credentials_secret_string)["TENDERLY_ACCOUNT_SLUG"] },
+    { name = "TENDERLY_ACCESS_KEY", value = jsondecode(module.kms.app_credentials_secret_string)["TENDERLY_ACCESS_KEY"] },
 
     # Google KMS (alternative signer, if needed)
     { name = "PROJECT", value = jsondecode(module.kms.app_credentials_secret_string)["PROJECT"] },

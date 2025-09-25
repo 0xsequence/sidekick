@@ -1,14 +1,14 @@
-# Secrets Manager ARN outputs
+# Secrets Manager ARN outputs (using data sources)
 output "redis_credentials_secret_arn" {
-  value = aws_secretsmanager_secret.redis_credentials.arn
+  value = data.aws_secretsmanager_secret.redis_credentials.arn
 }
 
 output "postgres_credentials_secret_arn" {
-  value = aws_secretsmanager_secret.postgres_credentials.arn
+  value = data.aws_secretsmanager_secret.postgres_credentials.arn
 }
 
 output "app_credentials_secret_arn" {
-  value = aws_secretsmanager_secret.app_credentials.arn
+  value = data.aws_secretsmanager_secret.app_credentials.arn
 }
 
 # Secret version outputs
