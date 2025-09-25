@@ -7,10 +7,13 @@ import {
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
-import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
-import { getSigner } from '~/utils/wallet'
 import type { TransactionResponse } from '~/types/general'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import {
+	extractTxHashFromErrorReceipt,
+	getBlockExplorerUrl
+} from '~/utils/other'
+import { getSigner } from '~/utils/wallet'
 
 type ERC1155ItemsBurnRequestBody = {
 	tokenId: string
@@ -102,7 +105,7 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
 		async (request, reply) => {
 			logRequest(request)
 
-			let tenderlyUrl: string | null = null
+			const tenderlyUrl: string | null = null
 			let txHash: string | null = null
 			const { chainId, contractAddress } = request.params
 
@@ -147,14 +150,17 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
 				})
 				const txService = new TransactionService(fastify)
 
-			logStep(request, 'Sending burn transaction...')
-			const txResponse: TransactionResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
-			txHash = txResponse.hash
-			logStep(request, 'Burn transaction sent', { txResponse })
+				logStep(request, 'Sending burn transaction...')
+				const txResponse: TransactionResponse = await signer.sendTransaction(
+					tx,
+					{ waitForReceipt: waitForReceipt ?? false }
+				)
+				txHash = txResponse.hash
+				logStep(request, 'Burn transaction sent', { txResponse })
 
-			if (txResponse.receipt?.status === 0) {
-				throw new Error('Transaction reverted', { cause: txResponse.receipt })
-			}
+				if (txResponse.receipt?.status === 0) {
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
+				}
 
 				await txService.createTransaction({
 					chainId,
@@ -170,13 +176,13 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
 				logStep(request, 'Burn transaction success', {
 					txHash: txResponse.hash
 				})
-			return reply.code(200).send({
-				result: {
-					txHash: txHash,
-					txUrl: getBlockExplorerUrl(Number(chainId), txHash),
-					txSimulationUrl: tenderlyUrl ?? null
-				}
-			})
+				return reply.code(200).send({
+					result: {
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
+						txSimulationUrl: tenderlyUrl ?? null
+					}
+				})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)
@@ -189,13 +195,13 @@ export async function erc1155ItemsBurn(fastify: FastifyInstance) {
 				})
 
 				const errorMessage =
-					error instanceof Error
-						? error.message
-						: 'Unknown error during burn'
+					error instanceof Error ? error.message : 'Unknown error during burn'
 				return reply.code(500).send({
 					result: {
 						txHash: finalTxHash,
-						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
+						txUrl: finalTxHash
+							? getBlockExplorerUrl(Number(chainId), finalTxHash)
+							: null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}

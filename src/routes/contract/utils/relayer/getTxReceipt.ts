@@ -1,5 +1,7 @@
 import { Type } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
+import type { TransactionReceipt, TransactionResponse } from '~/types/general'
+import { logStep } from '~/utils/loggingUtils'
 import { getRelayer } from '~/utils/wallet'
 
 type GetTxReceiptParams = {
@@ -10,7 +12,8 @@ type GetTxReceiptParams = {
 type GetTxReceiptResponse = {
 	result?: {
 		data: {
-			receipt: unknown
+			receipt: TransactionReceipt | null
+			isSuccessful: boolean | null
 		}
 		error?: string
 	}
@@ -30,9 +33,47 @@ const getTxReceiptSchema = {
 		200: Type.Object({
 			result: Type.Object({
 				data: Type.Object({
-					receipt: Type.Any()
+					receipt: Type.Object({
+						type: Type.String(),
+						root: Type.String(),
+						status: Type.String(),
+						cumulativeGasUsed: Type.String(),
+						logsBloom: Type.String(),
+						logs: Type.Optional(
+							Type.Array(
+								Type.Object({
+									address: Type.String(),
+									topics: Type.Array(Type.String()),
+									data: Type.String(),
+									blockNumber: Type.String(),
+									transactionHash: Type.String(),
+									transactionIndex: Type.String(),
+									blockHash: Type.String(),
+									logIndex: Type.String(),
+									removed: Type.Boolean()
+								})
+							)
+						),
+						transactionHash: Type.String(),
+						contractAddress: Type.String(),
+						gasUsed: Type.String(),
+						effectiveGasPrice: Type.String(),
+						blockHash: Type.String(),
+						blockNumber: Type.String(),
+						transactionIndex: Type.String()
+					}),
+					isSuccessful: Type.Boolean()
 				}),
 				error: Type.Optional(Type.String())
+			})
+		}),
+		500: Type.Object({
+			result: Type.Object({
+				data: Type.Object({
+					receipt: Type.Null(),
+					isSuccessful: Type.Null()
+				}),
+				error: Type.String()
 			})
 		})
 	}
@@ -51,16 +92,25 @@ export async function getTxReceipt(fastify: FastifyInstance) {
 			try {
 				const { chainId, metaTxHash } = request.params
 
-				// Get the relayer for the specified chain
 				const relayer = await getRelayer(chainId)
 
-				// Wait for the transaction to be mined and get the receipt
-				const receipt = await relayer.wait(metaTxHash)
+				logStep(request, 'Waiting for transaction receipt for meta tx: ', {
+					metaTxHash
+				})
+
+				const receipt: TransactionResponse = await relayer.wait(metaTxHash)
+
+				logStep(request, 'Transaction receipt received: ', {
+					receipt: receipt.receipt
+				})
 
 				return reply.code(200).send({
 					result: {
 						data: {
-							receipt
+							receipt: receipt.receipt,
+							isSuccessful:
+								receipt.receipt?.status === '0x1' ||
+								receipt.receipt?.status === 1
 						}
 					}
 				})
@@ -69,7 +119,8 @@ export async function getTxReceipt(fastify: FastifyInstance) {
 				return reply.code(500).send({
 					result: {
 						data: {
-							receipt: null
+							receipt: null,
+							isSuccessful: null
 						},
 						error:
 							error instanceof Error

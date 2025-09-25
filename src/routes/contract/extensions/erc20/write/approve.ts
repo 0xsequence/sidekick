@@ -7,10 +7,13 @@ import {
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
-import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
-import { getSigner } from '~/utils/wallet'
 import type { TransactionResponse } from '~/types/general'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import {
+	extractTxHashFromErrorReceipt,
+	getBlockExplorerUrl
+} from '~/utils/other'
+import { getSigner } from '~/utils/wallet'
 
 type ERC20ApproveRequestBody = {
 	spender: string
@@ -137,16 +140,19 @@ export async function erc20Approve(fastify: FastifyInstance) {
 
 				const txService = new TransactionService(fastify)
 
-			logStep(request, 'Sending approve transaction...')
-			const txResponse: TransactionResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
-			txHash = txResponse.hash
-			logStep(request, 'Approve transaction sent', {
-				txHash: txResponse.hash
-			})
+				logStep(request, 'Sending approve transaction...')
+				const txResponse: TransactionResponse = await signer.sendTransaction(
+					tx,
+					{ waitForReceipt: waitForReceipt ?? false }
+				)
+				txHash = txResponse.hash
+				logStep(request, 'Approve transaction sent', {
+					txHash: txResponse.hash
+				})
 
-			if (txResponse.receipt?.status === 0) {
-				throw new Error('Transaction reverted', { cause: txResponse.receipt })
-			}
+				if (txResponse.receipt?.status === 0) {
+					throw new Error('Transaction reverted', { cause: txResponse.receipt })
+				}
 
 				await txService.createTransaction({
 					chainId,
@@ -159,13 +165,13 @@ export async function erc20Approve(fastify: FastifyInstance) {
 					functionName: 'approve'
 				})
 
-			return reply.code(200).send({
-				result: {
-					txHash: txHash,
-					txUrl: getBlockExplorerUrl(Number(chainId), txHash),
-					txSimulationUrl: tenderlyUrl ?? null
-				}
-			})
+				return reply.code(200).send({
+					result: {
+						txHash: txHash,
+						txUrl: getBlockExplorerUrl(Number(chainId), txHash),
+						txSimulationUrl: tenderlyUrl ?? null
+					}
+				})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)
@@ -178,13 +184,13 @@ export async function erc20Approve(fastify: FastifyInstance) {
 				})
 
 				const errorMessage =
-					error instanceof Error
-						? error.message
-						: 'Failed to execute approve'
+					error instanceof Error ? error.message : 'Failed to execute approve'
 				return reply.code(500).send({
 					result: {
 						txHash: finalTxHash,
-						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
+						txUrl: finalTxHash
+							? getBlockExplorerUrl(Number(chainId), finalTxHash)
+							: null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}

@@ -7,10 +7,13 @@ import {
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
-import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl } from '~/utils/other'
-import { getSigner } from '~/utils/wallet'
 import type { TransactionResponse } from '~/types/general'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import {
+	extractTxHashFromErrorReceipt,
+	getBlockExplorerUrl
+} from '~/utils/other'
+import { getSigner } from '~/utils/wallet'
 
 type ERC1155MintRequestBody = {
 	recipient: string
@@ -110,7 +113,13 @@ export async function erc1155Mint(fastify: FastifyInstance) {
 			const { chainId, contractAddress } = request.params
 
 			try {
-				const { recipient, id, amount, data: mintData, waitForReceipt } = request.body
+				const {
+					recipient,
+					id,
+					amount,
+					data: mintData,
+					waitForReceipt
+				} = request.body
 
 				const signer = await getSigner(chainId)
 				logStep(request, 'Tx signer received', {
@@ -155,7 +164,10 @@ export async function erc1155Mint(fastify: FastifyInstance) {
 				const txService = new TransactionService(fastify)
 
 				logStep(request, 'Sending mint transaction...')
-				const txResponse: TransactionResponse = await signer.sendTransaction(tx, {waitForReceipt: waitForReceipt ?? false})
+				const txResponse: TransactionResponse = await signer.sendTransaction(
+					tx,
+					{ waitForReceipt: waitForReceipt ?? false }
+				)
 				txHash = txResponse.hash
 				logStep(request, 'Mint transaction sent', { txResponse })
 
@@ -196,13 +208,13 @@ export async function erc1155Mint(fastify: FastifyInstance) {
 				})
 
 				const errorMessage =
-					error instanceof Error
-						? error.message
-						: 'Failed to mint NFT'
+					error instanceof Error ? error.message : 'Failed to mint NFT'
 				return reply.code(500).send({
 					result: {
 						txHash: finalTxHash,
-						txUrl: finalTxHash ? getBlockExplorerUrl(Number(chainId), finalTxHash) : null,
+						txUrl: finalTxHash
+							? getBlockExplorerUrl(Number(chainId), finalTxHash)
+							: null,
 						txSimulationUrl: tenderlyUrl ?? null,
 						error: errorMessage
 					}

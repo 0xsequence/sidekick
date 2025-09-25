@@ -6,10 +6,14 @@ import {
 	prepareTransactionsForTenderlySimulation
 } from '~/routes/contract/utils/tenderly/getSimulationUrl'
 import { TransactionService } from '~/services/transaction.service'
-import { logError, logRequest, logStep } from '~/utils/loggingUtils'
-import { extractTxHashFromErrorReceipt, getBlockExplorerUrl, getContractAddressFromEvent } from '~/utils/other'
-import { getSigner } from '~/utils/wallet'
 import type { TransactionResponse } from '~/types/general'
+import { logError, logRequest, logStep } from '~/utils/loggingUtils'
+import {
+	extractTxHashFromErrorReceipt,
+	getBlockExplorerUrl,
+	getContractAddressFromEvent
+} from '~/utils/other'
+import { getSigner } from '~/utils/wallet'
 
 type DeployUpgradeableContractRequestBody = {
 	implementationAbi: Array<ethers.InterfaceAbi>
@@ -124,20 +128,20 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 		async (request, reply) => {
 			logRequest(request)
 
-			let deploymentSimulationUrl: string | null = null
-			let initializationSimulationUrl: string | null = null
+			const deploymentSimulationUrl: string | null = null
+			const initializationSimulationUrl: string | null = null
 			let deploymentTxHash: string | null = null
 			let initializationTxHash: string | null = null
 			const { chainId } = request.params
 
 			try {
-			const {
-				implementationAbi,
-				implementationBytecode,
-				initializeFunctionName,
-				initializeArgs,
-				waitForReceipt
-			} = request.body
+				const {
+					implementationAbi,
+					implementationBytecode,
+					initializeFunctionName,
+					initializeArgs,
+					waitForReceipt
+				} = request.body
 
 				logStep(request, 'Validating implementation bytecode')
 				if (!implementationBytecode.startsWith('0x')) {
@@ -201,42 +205,43 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 					rawFunctionInput: deploymentSimulationData
 				})
 
-			logStep(request, 'Sending implementation deployment transaction')
-			const deployTxResponse = await signer.sendTransaction(deploymentTx, {waitForReceipt: true})
-			deploymentTxHash = deployTxResponse.hash
-			logStep(request, 'Implementation deployment transaction sent')
+				logStep(request, 'Sending implementation deployment transaction')
+				const deployTxResponse = await signer.sendTransaction(deploymentTx, {
+					waitForReceipt: true
+				})
+				deploymentTxHash = deployTxResponse.hash
+				logStep(request, 'Implementation deployment transaction sent')
 
-			if (deployTxResponse.receipt?.status === 0) {
-				logError(
-					request,
-					new Error(
-						'Implementation contract deployment transaction reverted'
-					),
-					{ deployReceipt: deployTxResponse.receipt }
-				)
-				throw new Error(
-					'Transaction reverted',
-					{ cause: deployTxResponse.receipt }
-				)
-			}
+				if (deployTxResponse.receipt?.status === 0) {
+					logError(
+						request,
+						new Error(
+							'Implementation contract deployment transaction reverted'
+						),
+						{ deployReceipt: deployTxResponse.receipt }
+					)
+					throw new Error('Transaction reverted', {
+						cause: deployTxResponse.receipt
+					})
+				}
 
-			const deployedContractAddress = getContractAddressFromEvent(
-				deployTxResponse.receipt,
-				'CreatedContract(address)'
-			)
+				const deployedContractAddress = getContractAddressFromEvent(
+					deployTxResponse.receipt,
+					'CreatedContract(address)'
+				)
 
-			if (!deployedContractAddress) {
-				logError(
-					request,
-					new Error(
-						'Contract address not found after implementation deployment.'
-					),
-					{ deployTxResponse }
-				)
-				throw new Error(
-					'Contract address not found after implementation deployment. This can happen if the transaction failed or is not a contract creation.'
-				)
-			}
+				if (!deployedContractAddress) {
+					logError(
+						request,
+						new Error(
+							'Contract address not found after implementation deployment.'
+						),
+						{ deployTxResponse }
+					)
+					throw new Error(
+						'Contract address not found after implementation deployment. This can happen if the transaction failed or is not a contract creation.'
+					)
+				}
 				logStep(request, 'Implementation contract deployed', {
 					deployedContractAddress
 				})
@@ -284,30 +289,31 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 					rawFunctionInput: initializationSimulationData
 				})
 
-			logStep(
-				request,
-				`Sending initialization transaction to ${deployedContractAddress} for function '${initializeFunctionName}'`
-			)
-			const initializeTxResponse =
-				await signer.sendTransaction(initializationTx, {waitForReceipt: true})
-			initializationTxHash = initializeTxResponse.hash
-			logStep(request, 'Initialization transaction sent', {
-				initializationTxHash: initializeTxResponse.hash
-			})
-
-			if (initializeTxResponse.receipt?.status === 0) {
-				logError(
+				logStep(
 					request,
-					new Error(
-						`Contract initialization transaction for function '${initializeFunctionName}' reverted`
-					),
-					{ initializeReceipt: initializeTxResponse.receipt }
+					`Sending initialization transaction to ${deployedContractAddress} for function '${initializeFunctionName}'`
 				)
-				throw new Error(
-					'Transaction reverted',
-					{ cause: initializeTxResponse.receipt }
+				const initializeTxResponse = await signer.sendTransaction(
+					initializationTx,
+					{ waitForReceipt: true }
 				)
-			}
+				initializationTxHash = initializeTxResponse.hash
+				logStep(request, 'Initialization transaction sent', {
+					initializationTxHash: initializeTxResponse.hash
+				})
+
+				if (initializeTxResponse.receipt?.status === 0) {
+					logError(
+						request,
+						new Error(
+							`Contract initialization transaction for function '${initializeFunctionName}' reverted`
+						),
+						{ initializeReceipt: initializeTxResponse.receipt }
+					)
+					throw new Error('Transaction reverted', {
+						cause: initializeTxResponse.receipt
+					})
+				}
 
 				logStep(request, 'Creating transaction record in db')
 				await txService.createTransaction({
@@ -323,25 +329,25 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 
 				logStep(request, 'Deploy and initialize success')
 
-			return reply.code(200).send({
-				result: {
-					deploymentTxHash: deploymentTxHash,
-					deploymentTxUrl: getBlockExplorerUrl(
-						Number(chainId),
-						deploymentTxHash
-					),
-					initializationTxHash: initializationTxHash,
-					initializationTxUrl: getBlockExplorerUrl(
-						Number(chainId),
-						initializationTxHash
-					),
-					deployedContractAddress: deployedContractAddress,
-					txSimulationUrls: [
-						deploymentSimulationUrl,
-						initializationSimulationUrl
-					]
-				}
-			})
+				return reply.code(200).send({
+					result: {
+						deploymentTxHash: deploymentTxHash,
+						deploymentTxUrl: getBlockExplorerUrl(
+							Number(chainId),
+							deploymentTxHash
+						),
+						initializationTxHash: initializationTxHash,
+						initializationTxUrl: getBlockExplorerUrl(
+							Number(chainId),
+							initializationTxHash
+						),
+						deployedContractAddress: deployedContractAddress,
+						txSimulationUrls: [
+							deploymentSimulationUrl,
+							initializationSimulationUrl
+						]
+					}
+				})
 			} catch (error) {
 				// Extract transaction hash from error receipt if available
 				const errorTxHash = extractTxHashFromErrorReceipt(error)
@@ -362,9 +368,13 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 				return reply.code(500).send({
 					result: {
 						deploymentTxHash: finalDeploymentTxHash,
-						deploymentTxUrl: finalDeploymentTxHash ? getBlockExplorerUrl(Number(chainId), finalDeploymentTxHash) : null,
+						deploymentTxUrl: finalDeploymentTxHash
+							? getBlockExplorerUrl(Number(chainId), finalDeploymentTxHash)
+							: null,
 						initializationTxHash: finalInitializationTxHash,
-						initializationTxUrl: finalInitializationTxHash ? getBlockExplorerUrl(Number(chainId), finalInitializationTxHash) : null,
+						initializationTxUrl: finalInitializationTxHash
+							? getBlockExplorerUrl(Number(chainId), finalInitializationTxHash)
+							: null,
 						deployedContractAddress: null,
 						txSimulationUrls: [
 							deploymentSimulationUrl ?? '',
