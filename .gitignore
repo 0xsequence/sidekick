@@ -188,11 +188,16 @@ dev.key
 # Generated files
 src/lib/generated/
 
-# Terraform
 *.tfstate
+
 *.tfstate.backup
+
 .terraform/
+
 *.terraform.lock.hcl
 
-# VS Code
+
+
+#
+
 .*Zone.Identifier

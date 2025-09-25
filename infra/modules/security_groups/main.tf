@@ -183,6 +183,13 @@ resource "aws_security_group" "alb_internal_sg" {
     cidr_blocks = var.aws_route_pragma_peer_cidrs
   }
 
+  ingress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks =  ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
