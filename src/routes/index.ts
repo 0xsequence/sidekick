@@ -35,10 +35,14 @@ import { readContract } from './contract/read/read'
 import { simulateDeployment } from './contract/simulate/simulateDeployment'
 import { simulateTransaction } from './contract/simulate/simulateTransaction'
 import { addContract } from './contract/utils/addContract/addContract'
+import { checkForInternalReverts } from './contract/utils/debug/checkForInternalReverts'
+import { getDecodedTrace } from './contract/utils/debug/getDecodedTrace'
+import { getRawTrace } from './contract/utils/debug/getRawTrace'
 import { getAllContracts } from './contract/utils/get/getAllContracts'
 import { getContract } from './contract/utils/get/getContract'
 import { importContracts } from './contract/utils/importContracts/importContracts'
 import { isDeployed } from './contract/utils/isDeployed/isDeployed'
+import { getTxHashForMetaTxHash } from './contract/utils/relayer/getTxHashForMetaTxHash'
 import { getTxReceipt } from './contract/utils/relayer/getTxReceipt'
 import { verifyContract } from './contract/utils/verify/verify'
 import { writeContract } from './contract/write/write'
@@ -153,6 +157,12 @@ export default async function (fastify: FastifyInstance) {
 
 	// Register relayer routes
 	getTxReceipt(fastify)
+	getTxHashForMetaTxHash(fastify)
+
+	// Register debug routes
+	getRawTrace(fastify)
+	getDecodedTrace(fastify)
+	checkForInternalReverts(fastify)
 
 	// Webhooks
 	addWebhook(fastify)
