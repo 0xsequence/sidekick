@@ -8,6 +8,7 @@ type RawTraceDebugResponse = {
 	result: {
 		hasRevertedCalls: boolean
 		revertedCalls: any[]
+		revertedReasons: string[] | null
 		error?: string
 	}
 }
@@ -28,6 +29,7 @@ type GetTxReceiptResponse = {
 			receipt: TransactionReceipt | null
 			isSuccessful: boolean | null
 			hasRevertedCalls: boolean | null
+			revertedReasons: string[] | null
 			revertedCalls: any[] | null
 		}
 		error?: string
@@ -48,10 +50,7 @@ const getTxReceiptSchema = {
 		type: 'object',
 		properties: {
 			rpcUrl: { type: 'string', description: 'RPC URL for debug calls' },
-			checkForInternalReverts: {
-				type: 'string',
-				description: 'Whether to check for internal reverts'
-			}
+			debug: { type: 'boolean', description: 'Whether to debug' },
 		}
 	},
 	response: {
@@ -89,7 +88,8 @@ const getTxReceiptSchema = {
 					}),
 					hasRevertedCalls: Type.Union([Type.Boolean(), Type.Null()]),
 					revertedCalls: Type.Union([Type.Array(Type.Any()), Type.Null()]),
-					isSuccessful: Type.Boolean()
+					isSuccessful: Type.Boolean(),
+					revertedReasons: Type.Union([Type.Array(Type.String()), Type.Null()])
 				}),
 				error: Type.Optional(Type.String())
 			})
@@ -136,7 +136,7 @@ export async function getTxReceipt(fastify: FastifyInstance) {
 				if (debug === true && txHash && rpcUrl) {
 					const raw_trace_debug_response = await fastify.inject({
 						method: 'GET',
-						url: `/debug/${chainId}/${txHash}`,
+						url: `/debug/checkForInternalReverts/${chainId}/${txHash}`,
 						query: {
 							rpcUrl: rpcUrl
 						}
@@ -157,7 +157,8 @@ export async function getTxReceipt(fastify: FastifyInstance) {
 								receipt.receipt?.status === '0x1' ||
 								receipt.receipt?.status === 1,
 							hasRevertedCalls: debugData?.result.hasRevertedCalls || null,
-							revertedCalls: debugData?.result.revertedCalls || null
+							revertedCalls: debugData?.result.revertedCalls || null,
+							revertedReasons: debugData?.result.revertedReasons || null
 						}
 					}
 				})
@@ -169,7 +170,8 @@ export async function getTxReceipt(fastify: FastifyInstance) {
 							receipt: null,
 							isSuccessful: null,
 							hasRevertedCalls: null,
-							revertedCalls: null
+							revertedCalls: null,
+							revertedReasons: null
 						},
 						error:
 							error instanceof Error

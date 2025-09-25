@@ -347,10 +347,7 @@ export async function checkForInternalReverts(fastify: FastifyInstance) {
 						}
 					})
 
-				// Pass the provider into the transformation logic to enable contract name lookups.
 				const simplifiedTrace = await transformTrace(rawTrace, provider)
-				// turn into json string
-				const simplifiedTraceString = JSON.stringify(simplifiedTrace)
 				const revertedCalls = findRevertedCalls([simplifiedTrace])
 				const revertedReasons = Array.from(
 					new Set(
