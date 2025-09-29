@@ -17,6 +17,7 @@ import { erc721ItemsBatchBurn } from './contract/extensions/erc721/erc721Items/w
 import { erc721ItemsBurn } from './contract/extensions/erc721/erc721Items/write/burn'
 import { erc721ItemsInitialize } from './contract/extensions/erc721/erc721Items/write/initialize'
 import { erc721ItemsMint } from './contract/extensions/erc721/erc721Items/write/mint'
+import { erc721ItemsMintSequential } from './contract/extensions/erc721/erc721Items/write/mintSequential'
 import { erc721BalanceOf } from './contract/extensions/erc721/read/balanceOf'
 import { erc721Burn } from './contract/extensions/erc721/write/burn'
 import { erc721SafeMint } from './contract/extensions/erc721/write/safeMint'
@@ -123,6 +124,7 @@ export default async function (fastify: FastifyInstance) {
 
 	// Register erc721Items routes
 	erc721ItemsMint(fastify)
+	erc721ItemsMintSequential(fastify)
 	erc721ItemsBurn(fastify)
 	erc721ItemsBatchBurn(fastify)
 	erc721ItemsInitialize(fastify)
