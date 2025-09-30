@@ -15,7 +15,7 @@ export class TransactionService {
 		txHash?: string | undefined
 		data?: string | undefined
 		functionName?: string | undefined
-		args?: Array<string> | undefined
+		args?: Array<any> | undefined
 		isDeployTx?: boolean
 	}): Promise<Transaction | null> {
 		if (!process.env.DATABASE_URL) {

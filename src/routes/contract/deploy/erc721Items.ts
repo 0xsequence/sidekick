@@ -52,7 +52,7 @@ type ERC721ItemsDeployAndInitializeResponse = {
 }
 
 const ERC721ItemsDeployAndInitializeSchema = {
-	tags: ['ERC721Items', 'Deploy', 'Initialize', 'Upgradeable'],
+	tags: ['Deploy', 'Initialize', 'Upgradeable'],
 	description: 'Deploy and initialize an ERC721Items contract.',
 	body: {
 		type: 'object',
@@ -361,8 +361,8 @@ export async function erc721ItemsDeployAndInitialize(fastify: FastifyInstance) {
 						),
 						deployedContractAddress: deployedContractAddress,
 						txSimulationUrls: [
-							deploymentSimulationUrl,
-							initializationSimulationUrl
+							deploymentSimulationUrl ?? '',
+							initializationSimulationUrl ?? ''
 						]
 					}
 				})

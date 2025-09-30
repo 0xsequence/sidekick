@@ -31,7 +31,7 @@ type SimulateTransactionResponse = {
 		contracts: unknown
 		generated_access_list: unknown
 		error?: string
-		tenderlySimulationUrl?: string
+		tenderlySimulationUrl?: string | null
 	}
 }
 
@@ -220,7 +220,7 @@ export async function simulateTransaction(fastify: FastifyInstance) {
 						simulation: data.simulation,
 						contracts: data.contracts,
 						generated_access_list: data.generated_access_list,
-						tenderlySimulationUrl: tenderlyUrl
+						tenderlySimulationUrl: tenderlyUrl 
 					}
 				})
 			} catch (error) {

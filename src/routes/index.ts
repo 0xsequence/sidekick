@@ -1,6 +1,7 @@
 import { ChainId } from '@0xsequence/network'
 import type { FastifyInstance } from 'fastify'
 import metrics from '../plugins/metrics/metrics'
+
 import { getSigner } from '../utils/wallet'
 import { deployContract } from './contract/deploy/contract'
 import { erc20Deploy } from './contract/deploy/erc20'
@@ -9,28 +10,6 @@ import { erc721ItemsDeployAndInitialize } from './contract/deploy/erc721Items'
 import { erc1155Deploy } from './contract/deploy/erc1155'
 import { erc1155ItemsDeploy } from './contract/deploy/erc1155Items'
 import { deployUpgradeableContract } from './contract/deploy/upgradeableContract'
-import { erc20Approve } from './contract/extensions/erc20/write/approve'
-import { erc20Mint } from './contract/extensions/erc20/write/mint'
-import { erc20Transfer } from './contract/extensions/erc20/write/transfer'
-import { erc20TransferFrom } from './contract/extensions/erc20/write/transferFrom'
-import { erc721ItemsBatchBurn } from './contract/extensions/erc721/erc721Items/write/batchBurn'
-import { erc721ItemsBurn } from './contract/extensions/erc721/erc721Items/write/burn'
-import { erc721ItemsInitialize } from './contract/extensions/erc721/erc721Items/write/initialize'
-import { erc721ItemsMint } from './contract/extensions/erc721/erc721Items/write/mint'
-import { erc721BalanceOf } from './contract/extensions/erc721/read/balanceOf'
-import { erc721Burn } from './contract/extensions/erc721/write/burn'
-import { erc721SafeMint } from './contract/extensions/erc721/write/safeMint'
-import { erc721SafeMintBatch } from './contract/extensions/erc721/write/safeMintBatch'
-import { erc1155ItemsBatchBurn } from './contract/extensions/erc1155/erc1155Items/write/batchBurn'
-import { erc1155ItemsBurn } from './contract/extensions/erc1155/erc1155Items/write/burn'
-import { erc1155ItemsInitialize } from './contract/extensions/erc1155/erc1155Items/write/initialize'
-import { erc1155ItemsMint } from './contract/extensions/erc1155/erc1155Items/write/mint'
-import { erc1155BalanceOf } from './contract/extensions/erc1155/read/balanceOf'
-import { erc1155HasRole } from './contract/extensions/erc1155/read/hasRole'
-import { erc1155MinterRole } from './contract/extensions/erc1155/read/minterRole'
-import { erc1155GrantRole } from './contract/extensions/erc1155/write/grantRole'
-import { erc1155Mint } from './contract/extensions/erc1155/write/mint'
-import { erc1155MintBatch } from './contract/extensions/erc1155/write/mintBatch'
 import { readContract } from './contract/read/read'
 import { simulateDeployment } from './contract/simulate/simulateDeployment'
 import { simulateTransaction } from './contract/simulate/simulateTransaction'
@@ -56,6 +35,11 @@ import { addWebhook } from './webhooks/addWebhook'
 import { getAllWebhooks } from './webhooks/getAllWebhooks'
 import { removeAllWebhooks } from './webhooks/removeAllWebhooks'
 import { removeWebhook } from './webhooks/removeWebhook'
+import { registerErc721ItemsRoutes } from './contract/extensions/erc721Items'
+import { registerErc1155ItemsRoutes } from './contract/extensions/erc1155Items'
+import { registerErc20Routes } from './contract/extensions/erc20'
+import { registerErc721Routes } from './contract/extensions/erc721'
+import { registerErc1155Routes } from './contract/extensions/erc1155'
 
 export default async function (fastify: FastifyInstance) {
 	// Health check route
@@ -100,38 +84,6 @@ export default async function (fastify: FastifyInstance) {
 	writeContract(fastify)
 	getAllContracts(fastify)
 	getContract(fastify)
-
-	// Register erc20 routes
-	erc20Transfer(fastify)
-	erc20Approve(fastify)
-	erc20Mint(fastify)
-	erc20TransferFrom(fastify)
-
-	// Register erc721 routes
-	erc721SafeMint(fastify)
-	erc721SafeMintBatch(fastify)
-	erc721BalanceOf(fastify)
-	erc721Burn(fastify)
-
-	// Register erc1155 routes
-	erc1155Mint(fastify)
-	erc1155MintBatch(fastify)
-	erc1155GrantRole(fastify)
-	erc1155HasRole(fastify)
-	erc1155MinterRole(fastify)
-	erc1155BalanceOf(fastify)
-
-	// Register erc721Items routes
-	erc721ItemsMint(fastify)
-	erc721ItemsBurn(fastify)
-	erc721ItemsBatchBurn(fastify)
-	erc721ItemsInitialize(fastify)
-
-	// Register erc1155Items routes
-	erc1155ItemsMint(fastify)
-	erc1155ItemsBurn(fastify)
-	erc1155ItemsBatchBurn(fastify)
-	erc1155ItemsInitialize(fastify)
 
 	// Register is deployed route
 	isDeployed(fastify)
@@ -182,4 +134,10 @@ export default async function (fastify: FastifyInstance) {
 
 	// Contract verification
 	verifyContract(fastify)
+
+	registerErc721ItemsRoutes(fastify)
+	registerErc1155ItemsRoutes(fastify)
+	registerErc20Routes(fastify)
+	registerErc721Routes(fastify)
+	registerErc1155Routes(fastify)
 }

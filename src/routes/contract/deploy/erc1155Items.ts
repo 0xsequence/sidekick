@@ -342,8 +342,8 @@ export async function erc1155ItemsDeploy(fastify: FastifyInstance) {
 						),
 						deployedContractAddress: deployedContractAddress,
 						txSimulationUrls: [
-							deploymentSimulationUrl,
-							initializationSimulationUrl
+							deploymentSimulationUrl ?? '',	
+							initializationSimulationUrl ?? ''
 						]
 					}
 				})
