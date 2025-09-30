@@ -17,9 +17,13 @@ export const getTenderlySimulationUrl = ({
 	contractFunction,
 	rawFunctionInput,
 	functionInputs
-}: TenderlySimulatorUrlOptions): string => {
+}: TenderlySimulatorUrlOptions): string | null => {
 	const accountSlug = process.env.TENDERLY_ACCOUNT_SLUG as string
 	const projectSlug = process.env.TENDERLY_PROJECT_SLUG as string
+
+	if (!accountSlug || !projectSlug) {
+		return null;
+	}
 
 	const baseUrl = `https://dashboard.tenderly.co/${accountSlug}/${projectSlug}/simulator/new`
 	const params = new URLSearchParams({

@@ -39,7 +39,7 @@ type ERC1155DeployResponse = {
 }
 
 const ERC1155DeploySchema = {
-	tags: ['ERC1155', 'Deploy'],
+	tags: ['Deploy'],
 	description:
 		'Deploy an ERC1155 contract by providing the default admin, minter and name',
 	body: {

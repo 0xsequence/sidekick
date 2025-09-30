@@ -29,7 +29,7 @@ type SimulateDeploymentResponse = {
 		contracts: unknown
 		generated_access_list: unknown
 		error?: string
-		tenderlySimulationUrl?: string
+		tenderlySimulationUrl?: string | null
 	}
 }
 

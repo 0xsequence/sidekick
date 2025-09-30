@@ -34,7 +34,7 @@ type DeployUpgradeableContractResponse = {
 		initializationTxHash: string | null
 		initializationTxUrl: string | null
 		deployedContractAddress: string | null
-		txSimulationUrls?: string[]
+		txSimulationUrls?: string[] | null
 		error?: string
 	}
 }
@@ -343,8 +343,8 @@ export async function deployUpgradeableContract(fastify: FastifyInstance) {
 						),
 						deployedContractAddress: deployedContractAddress,
 						txSimulationUrls: [
-							deploymentSimulationUrl,
-							initializationSimulationUrl
+							deploymentSimulationUrl ?? '',
+							initializationSimulationUrl ?? ''
 						]
 					}
 				})

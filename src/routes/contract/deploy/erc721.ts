@@ -41,7 +41,7 @@ type ERC721DeployResponse = {
 }
 
 const ERC721DeploySchema = {
-	tags: ['ERC721', 'Deploy'],
+	tags: ['Deploy'],
 	description:
 		'Deploy an ERC721 contract by providing the default admin, minter, name and symbol',
 	body: {
