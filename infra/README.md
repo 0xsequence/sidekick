@@ -151,3 +151,69 @@ The Sidekick application requires the following environment variables:
 ### Optional:
 - `ETHERSCAN_API_KEY`: For contract verification
 - `VERIFY_CONTRACT_ON_DEPLOY`: Set to enable auto-verification
+
+Here's an improved version of your upgrade instructions:
+
+# Upgrade Instructions
+
+## Prerequisites
+- Docker installed and running
+- AWS CLI configured with appropriate permissions
+- Access to the Sequence ECR repository
+
+## Step 1: Prepare the Source Code
+
+```bash
+# Clone the repository (or pull latest if already cloned)
+git clone https://github.com/0xsequence/sidekick.git
+cd sidekick
+
+# Pull latest changes if updating existing clone
+git pull origin main
+```
+
+## Step 2: Install Dependencies & Build
+
+```bash
+# Install project dependencies
+pnpm install
+```
+
+## Step 3: Build Docker Image
+
+```bash
+# Build the Docker image with latest changes
+docker build -t sidekick/deployment .
+
+# Verify the image was built successfully
+docker images | grep sidekick/deployment
+```
+
+## Step 4: Push to AWS ECR
+
+```bash
+# Authenticate with AWS ECR
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 150734033613.dkr.ecr.us-west-2.amazonaws.com
+
+# Tag the image for ECR
+docker tag sidekick/deployment:latest 150734033613.dkr.ecr.us-west-2.amazonaws.com/sidekick/deployment:latest
+
+# Push the image to ECR
+docker push 150734033613.dkr.ecr.us-west-2.amazonaws.com/sidekick/deployment:latest
+```
+
+## Step 5: Deploy to ECS
+
+### Option A: AWS Console (UI)
+1. Navigate to **AWS ECS Console**
+2. Go to **Clusters** → `sidekick-cluster`
+3. Select **Services** tab → Click `sidekick-service`
+4. Click **Update Service**
+5. Check **"Force new deployment"** 
+6. Click **Update**
+
+
+# Things to keep in mind
+
+- For now, we do not have a notification system for each sidekick deployment update
+- If you want to make a change to the variables, for example, add a new one, you can do so in the variables of the ECS task in the code, or if you want to update their values, you can do so from the secret manager https://us-west-2.console.aws.amazon.com/secretsmanager/secret?name=sidekick%2Fapp%2Fcredentials&region=us-west-2&tab=overview

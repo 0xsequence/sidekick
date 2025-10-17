@@ -56,6 +56,15 @@ module "kms" {
   app_sm_name   = "sidekick/app/credentials"
 }
 
+# ECR ******************************************************************
+
+module "ecr"{
+  source = "./modules/ecr"
+  ecr_name              = "sidekick/deployment"
+  ecr_tag_mutability    = "MUTABLE"
+  ecr_scan_on_push      = true
+}
+
 # WAF ******************************************************************
 
 module "waf" {
@@ -193,7 +202,7 @@ module "ecs" {
 
   # Container
   ecs_task_definition_name                    = "sidekick-container"
-  ecs_task_definition_image                   = "ghcr.io/0xsequence/sidekick:wip-aws-infra"
+  ecs_task_definition_image                   = "150734033613.dkr.ecr.us-west-2.amazonaws.com/sidekick/deployment:latest"
   ecs_task_definition_essential               = true
   ecs_task_definition_portMappings_port       = 7500
   ecs_task_definition_portMappings_host_port  = 7500
