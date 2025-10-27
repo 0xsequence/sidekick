@@ -56,6 +56,7 @@ import { addWebhook } from './webhooks/addWebhook'
 import { getAllWebhooks } from './webhooks/getAllWebhooks'
 import { removeAllWebhooks } from './webhooks/removeAllWebhooks'
 import { removeWebhook } from './webhooks/removeWebhook'
+import { logError } from '~/utils/loggingUtils'
 
 export default async function (fastify: FastifyInstance) {
 	// Health check route
@@ -89,6 +90,59 @@ export default async function (fastify: FastifyInstance) {
 			return reply.code(200).send({
 				address: await signer.getAddress()
 			})
+		}
+	)
+
+	// Transfer native currency
+	fastify.post<{
+		Body: {
+			to: string,
+			value: string
+		}
+		Reply: {
+			txHash: string | null
+		}
+	}>(
+		'/write/native/transfer',
+		{
+			schema: {
+				description: 'Transfer native currency to an address',
+				tags: ['Native'],
+				body: {
+					type: 'object',
+					properties: {
+						to: { type: 'string', description: 'The address to transfer to' },
+						value: { type: 'string', description: 'The value to transfer' }
+					}
+				},
+				response: {
+					200: {
+						type: 'object',
+						properties: {
+							txHash: { type: 'string', description: 'The transaction hash' }
+						}
+					}
+				}
+			}
+		},
+		async (request, reply) => {
+			const { to, value } = request.body
+			const chainId = ChainId.MAINNET
+			const signer = await getSigner(chainId.toString())
+			try {
+				const txHash = await signer.sendTransaction({
+					to: to,
+					value: value
+				})
+				return reply.code(200).send({
+					txHash: txHash.hash
+				})
+			} catch (error) {
+				logError(request, error)
+				return reply.code(500).send({
+					txHash: null
+				})
+			}
 		}
 	)
 
