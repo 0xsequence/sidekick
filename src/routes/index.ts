@@ -56,6 +56,7 @@ import { addWebhook } from './webhooks/addWebhook'
 import { getAllWebhooks } from './webhooks/getAllWebhooks'
 import { removeAllWebhooks } from './webhooks/removeAllWebhooks'
 import { removeWebhook } from './webhooks/removeWebhook'
+import { registerErc721ItemsRoutes } from './contract/extensions/erc721/erc721Items'
 
 export default async function (fastify: FastifyInstance) {
 	// Health check route
@@ -126,6 +127,7 @@ export default async function (fastify: FastifyInstance) {
 	erc721ItemsBurn(fastify)
 	erc721ItemsBatchBurn(fastify)
 	erc721ItemsInitialize(fastify)
+	registerErc721ItemsRoutes(fastify)
 
 	// Register erc1155Items routes
 	erc1155ItemsMint(fastify)
