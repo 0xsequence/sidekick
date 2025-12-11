@@ -64,23 +64,21 @@ const decodedSignatureSchema = Type.Object({
 	)
 })
 
-const simplifiedTraceCallSchema = Type.Recursive((Self) =>
-	Type.Object({
-		type: Type.String(),
-		from: Type.String(),
-		fromContractName: Type.String(),
-		to: Type.String(),
-		toContractName: Type.String(),
-		functionSelector: Type.String(),
-		decodedFunctionSelector: decodedSignatureSchema,
-		value: Type.String(),
-		valueInEther: Type.String(),
-		gasUsed: Type.String(),
-		reverted: Type.Boolean(),
-		revertReason: Type.Optional(Type.String()),
-		calls: Type.Array(Self)
-	})
-)
+const simplifiedTraceCallSchema = Type.Object({
+	type: Type.String(),
+	from: Type.String(),
+	fromContractName: Type.String(),
+	to: Type.String(),
+	toContractName: Type.String(),
+	functionSelector: Type.String(),
+	decodedFunctionSelector: decodedSignatureSchema,
+	value: Type.String(),
+	valueInEther: Type.String(),
+	gasUsed: Type.String(),
+	reverted: Type.Boolean(),
+	revertReason: Type.Optional(Type.String()),
+	calls: Type.Array(Type.Any())
+})
 
 const debugCheckIfRevertedSchema = {
 	description:
