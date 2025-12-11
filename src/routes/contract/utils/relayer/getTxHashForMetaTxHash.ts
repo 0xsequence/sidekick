@@ -32,7 +32,10 @@ const getTxHashForMetaTxHashSchema = {
 		200: Type.Object({
 			result: Type.Object({
 				data: Type.Object({
-					txHash: Type.String()
+					txHash: {
+						type: 'string',
+						nullable: true
+					} as any
 				})
 			}),
 			error: Type.Optional(Type.String())
@@ -40,7 +43,10 @@ const getTxHashForMetaTxHashSchema = {
 		500: Type.Object({
 			result: Type.Object({
 				data: Type.Object({
-					txHash: Type.Null()
+					txHash: {
+						type: 'string',
+						nullable: true
+					} as any
 				}),
 				error: Type.String()
 			})
