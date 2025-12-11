@@ -1,6 +1,6 @@
 {
   "name": "sequence_sidekick",
-  "version": "v1.0.19-beta",
+  "version": "v1.0.20-beta",
   "module": "index.ts",
   "type": "module",
   "scripts": {
