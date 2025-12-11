@@ -86,10 +86,21 @@ const getTxReceiptSchema = {
 						blockNumber: Type.String(),
 						transactionIndex: Type.String()
 					}),
-					hasRevertedCalls: Type.Union([Type.Boolean(), Type.Null()]),
-					revertedCalls: Type.Union([Type.Array(Type.Any()), Type.Null()]),
+					hasRevertedCalls: {
+						type: 'boolean',
+						nullable: true
+					} as any,
+					revertedCalls: {
+						type: 'array',
+						items: {},
+						nullable: true
+					} as any,
 					isSuccessful: Type.Boolean(),
-					revertReasons: Type.Union([Type.Array(Type.String()), Type.Null()])
+					revertReasons: {
+						type: 'array',
+						items: { type: 'string' },
+						nullable: true
+					} as any
 				}),
 				error: Type.Optional(Type.String())
 			})
@@ -97,8 +108,28 @@ const getTxReceiptSchema = {
 		500: Type.Object({
 			result: Type.Object({
 				data: Type.Object({
-					receipt: Type.Null(),
-					isSuccessful: Type.Null()
+					receipt: {
+						type: 'object',
+						nullable: true
+					} as any,
+					isSuccessful: {
+						type: 'boolean',
+						nullable: true
+					} as any,
+					hasRevertedCalls: {
+						type: 'boolean',
+						nullable: true
+					} as any,
+					revertedCalls: {
+						type: 'array',
+						items: {},
+						nullable: true
+					} as any,
+					revertReasons: {
+						type: 'array',
+						items: { type: 'string' },
+						nullable: true
+					} as any
 				}),
 				error: Type.String()
 			})

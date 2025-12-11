@@ -32,19 +32,28 @@ const debugTraceTransactionSchema = {
 	response: {
 		200: Type.Object({
 			result: Type.Object({
-				trace: Type.Any(),
+				trace: {
+					type: 'object',
+					nullable: true
+				} as any,
 				error: Type.Optional(Type.String())
 			})
 		}),
 		'4xx': Type.Object({
 			result: Type.Object({
-				trace: Type.Null(),
+				trace: {
+					type: 'object',
+					nullable: true
+				} as any,
 				error: Type.String()
 			})
 		}),
 		500: Type.Object({
 			result: Type.Object({
-				trace: Type.Null(),
+				trace: {
+					type: 'object',
+					nullable: true
+				} as any,
 				error: Type.String()
 			})
 		})

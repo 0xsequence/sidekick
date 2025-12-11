@@ -21,9 +21,11 @@
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
     "tag:release": "sh ./scripts/tag-release.sh",
+    "check:openapi": "tsx scripts/check-openapi.ts",
     "postinstall": "prisma generate"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "^10.1.1",
     "@biomejs/biome": "1.9.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.13.1",
