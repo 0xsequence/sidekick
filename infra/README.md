@@ -66,6 +66,75 @@ This Terraform project deploys a containerized application ("Sidekick") on AWS w
   - ECS → Redis: Port 6379  
   - ALB → ECS: Port 7500
 
+## 🔌 What Sidekick Connects To
+
+### AWS Resources (in-VPC)
+| Resource | Purpose | How it's wired |
+|---|---|---|
+| PostgreSQL RDS (`sidekick-postgres`) | Persistent app data (Prisma) | `DATABASE_URL` env var, port 5432 |
+| Redis ElastiCache (`sidekick-redis`) | Cache + BullMQ job queues | `REDIS_HOST` / `REDIS_PORT=6379` env vars |
+| AWS KMS | Transaction signing when `SIGNER_TYPE=aws_kms` | `AWS_KMS_KEY_ID` env var |
+| AWS Secrets Manager | Source of truth for credentials | `sidekick/app/credentials`, `sidekick/postgres/credentials`, `sidekick/redis/credentials` |
+| ECR (`sidekick/deployment`) | Docker image source for ECS tasks | Pulled at task start |
+| CloudWatch Logs | Container stdout/stderr | Log group `/ecs/sidekick-task` (3-day retention) |
+
+### External Services (egress via NAT Gateway)
+| Service | Purpose | When it's used |
+|---|---|---|
+| Sequence Builder API (`api.sequence.build`) | Project metadata, contract listing | On most contract-related requests |
+| Sequence Indexer (per-chain) | Reading on-chain state, balances, txs | Any read endpoint that touches chain state |
+| Sequence Relayer (per-chain) | Submitting sponsored / smart-wallet txs | Transaction execution endpoints |
+| Chain RPC nodes (resolved via `@0xsequence/network`) | Direct `eth_*` calls (provider) | Wallet ops, deploys, debug traces |
+| Etherscan API (`api.etherscan.io/v2`) | Contract verification | Only when `VERIFY_CONTRACT_ON_DEPLOY=true` |
+| Tenderly API (`api.tenderly.co`) | Transaction simulation / debug URLs | Only when `TENDERLY_*` env vars are set |
+
+### Inbound Traffic
+- **Internal ALB** (`sidekick-alb-internal`): the intended entry point for traffic coming from the Pragma VPC (`10.102.0.0/16`) once VPC peering is established. Today it accepts traffic from inside the VPC.
+- **Public-facing ALB** (`sidekick-alb`): exists with WAF attached. Both ALBs forward to the same target group on port 7500.
+
+## 🩺 Health Check & Debugging
+
+### Quick Reference
+- **AWS account**: `150734033613` (DevGameServices)
+- **Region**: `us-west-2`
+- **Cluster**: `sidekick-cluster`
+- **Service**: `sidekick-service`
+- **Task family**: `sidekick-task`
+- **Log group**: `/ecs/sidekick-task`
+- **ECR image**: `150734033613.dkr.ecr.us-west-2.amazonaws.com/sidekick/deployment:latest`
+
+### What "Healthy" Looks Like
+In the ECS console (`sidekick-cluster` → `sidekick-service`):
+1. **Running task count = 1**, matching `desired count = 1` (set in `main.tf`).
+2. **Both target groups report `1 Healthy / 0 Unhealthy`** — `sidekick-tg` (public ALB) and `sidekick-tg-internal` (internal ALB).
+3. **Deployment state**: `Completed`, no in-progress rollouts.
+4. **Logs** in `/ecs/sidekick-task` show recurring lines like:
+   ```
+   INFO [..]: incoming request req-XXXX
+   "method": "GET", "url": "/", "remoteAddress": "10.0.x.x"
+   INFO [..]: request completed req-XXXX  → statusCode: 200, responseTime: ~0.2
+   ```
+   Those `GET /` calls are the ALB health checks hitting the container every few seconds — they should always be `200`.
+
+### About the `ContainerInstanceCount: 0` Metric
+The CloudWatch Container Insights cluster metric emits:
+```json
+{ "TaskCount": 1, "ContainerInstanceCount": 0, "ServiceCount": 1 }
+```
+**`ContainerInstanceCount: 0` is expected and does not indicate a problem.** That field only counts EC2 container instances for the EC2 launch type. Sidekick runs on **Fargate** (`launch_type = "FARGATE"` in `main.tf`), which has no container instances. The signal you actually want is `TaskCount` — it should equal `desired_count` (1).
+
+### Debugging Checklist
+1. **Is a task running?** ECS console → `sidekick-cluster` → `Tasks` tab → status `RUNNING`. If `PENDING` or flapping, click into the task → `Stopped reason` (out-of-memory, image pull failure, env var error, etc.).
+2. **Is the container healthy from the ALB's view?** EC2 console → Target Groups → `sidekick-tg-internal` → Targets tab. If `Unhealthy`, the health check (`GET /` on port 7500) is failing — check container logs.
+3. **What's the container actually saying?** CloudWatch → Log groups → `/ecs/sidekick-task` → latest log stream. Or use **Live Tail** for real-time. To filter for errors:
+   ```
+   filter @message like /statusCode\": [45]\d{2}/ or @message like /ERROR/
+   ```
+4. **Did secrets / env vars change?** Task definitions snapshot env values at registration time. Updating a secret in Secrets Manager does **not** propagate until the task definition is re-applied (`terraform apply`) and the service is forced to redeploy.
+5. **Forcing a new deployment** (after pushing a new image or changing config):
+   - ECS console → `sidekick-service` → **Update service** → check **Force new deployment** → Update.
+   - The `:latest` tag is mutable, so a new push + force-deploy is enough — no task-def rev bump required for image-only changes.
+
 ## 🛠️ Deployment
 
 ```bash
