@@ -1,5 +1,10 @@
 # Sequence Sidekick 🧑‍💻
 
+> [!WARNING]
+> **Sidekick is no longer maintained.** This repository is archived and will not receive further updates, bug fixes or security patches, including for the Node.js runtime and dependencies in the Docker image. The `ghcr.io/0xsequence/sidekick` images will not be rebuilt.
+>
+> If you run Sidekick today, plan to migrate off it. You can fork the repository to keep running it yourself, but you will be responsible for keeping it and its dependencies up to date.
+
 Sidekick is a companion service, fully open source,that simplifies blockchain interactions for your applications and games. It provides a RESTful API for executing sponsored transactions, managing smart contracts, and handling common Web3 operations without exposing private keys or complex blockchain logic to your frontend.
 
 When executing any transaction with Sidekick, the caller will not be the EOA of the PRIVATE KEY you're using for Sidekick, but a Sequence Smart Wallet created for your EOA.
